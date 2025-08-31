@@ -2,6 +2,7 @@
 import BaseLayout from './BaseLayout.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import TOC from '../components/TOC.astro';
+import SearchOverlay from '../components/SearchOverlay.astro';
 
 const { frontmatter, headings } = Astro.props as {
   frontmatter: any;
@@ -36,7 +37,7 @@ if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length)
 ---
 
 <BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} ogImage={frontmatter.cover}>
-
+  <Fragment slot="search"><SearchOverlay /></Fragment>
   <div class="mx-auto max-w-7xl px-4 mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(720px,760px)_1fr]">
     <div class="hidden lg:block"><TOC headings={headings} /></div>
     <article class="prose prose-invert max-w-[760px]">

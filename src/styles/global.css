@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 /* Fonts */
-@import "@fontsource-variable/inter/index.css";
+@import "@fontsource-variable/inter";
 @import "@fontsource/jetbrains-mono/400.css";
+
 
 /* Tailwind v4 Theme: Colors, Fonts, Radius, Shadow */
 @theme {

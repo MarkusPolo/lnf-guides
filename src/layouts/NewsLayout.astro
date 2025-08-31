@@ -1,5 +1,6 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import SearchOverlay from '../components/SearchOverlay.astro';
 
 const { frontmatter } = Astro.props as any;
 const canonical = new URL(Astro.url.pathname, Astro.site);
@@ -17,6 +18,7 @@ const articleLD = {
 ---
 
 <BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} ogImage={frontmatter.cover}>
+  <Fragment slot="search"><SearchOverlay /></Fragment>
   <article class="mx-auto max-w-3xl px-4 mt-8 prose">
     <h1>{frontmatter.title}</h1>
     <p class="text-sm text-text2"><time datetime={pubISO}>{new Date(frontmatter.pubDate).toLocaleDateString('en-US')}</time></p>
