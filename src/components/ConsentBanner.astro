@@ -1,0 +1,74 @@
+---
+const text = {
+  title: 'Privacy choices',
+  body: 'We use lightweight analytics and optional external embeds (e.g., comments/YouTube). Choose what to enable.',
+  ads: 'Ads/Affiliates',
+  ext: 'External embeds (e.g., comments)',
+  accept: 'Accept all',
+  reject: 'Reject all',
+  save: 'Save choices'
+};
+---
+
+<div id="consent-banner" class="fixed inset-x-0 bottom-0 z-[1100] m-4 hidden">
+  <div class="card p-4 md:p-5 grid gap-3 md:grid-cols-[1fr_auto] items-center">
+    <div>
+      <div class="font-semibold mb-1">{text.title}</div>
+      <p class="text-sm text-text2">{text.body}</p>
+      <div class="mt-3 flex flex-wrap gap-3 text-sm">
+        <label class="inline-flex items-center gap-2">
+          <input id="consent-ads" type="checkbox" class="accent-accent" />
+          {text.ads}
+        </label>
+        <label class="inline-flex items-center gap-2">
+          <input id="consent-external" type="checkbox" class="accent-accent" />
+          {text.ext}
+        </label>
+      </div>
+    </div>
+    <div class="flex gap-2 justify-end">
+      <button id="consent-reject" class="btn btn-outline">{text.reject}</button>
+      <button id="consent-accept" class="btn btn-primary">{text.accept}</button>
+      <button id="consent-save" class="btn btn-outline hidden">{text.save}</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // @ts-nocheck
+  (function () {
+    const root = document.getElementById('consent-banner');
+    const elAds = document.getElementById('consent-ads');
+    const elExt = document.getElementById('consent-external');
+    const btnAccept = document.getElementById('consent-accept');
+    const btnReject = document.getElementById('consent-reject');
+    const btnSave = document.getElementById('consent-save');
+
+    function open() {
+      const cons = window && window['consent'];
+      const c = cons && cons.get ? cons.get() : {};
+      if (elAds) elAds.checked = !!c.ads;
+      if (elExt) elExt.checked = !!c.external;
+      root && root.classList.remove('hidden');
+    }
+    function close() { root && root.classList.add('hidden'); }
+
+    const cons = window && window['consent'];
+    if (!(cons && cons.decided && cons.decided())) open();
+
+    btnAccept && btnAccept.addEventListener('click', () => { cons && cons.setAll && cons.setAll(true);  close(); });
+    btnReject && btnReject.addEventListener('click', () => { cons && cons.setAll && cons.setAll(false); close(); });
+    btnSave && btnSave.addEventListener('click', () => {
+      cons && cons.set && cons.set({
+        ads: !!(elAds && elAds.checked),
+        external: !!(elExt && elExt.checked),
+      });
+      close();
+    });
+
+    elAds && elAds.addEventListener('change', () => btnSave && btnSave.classList.remove('hidden'));
+    elExt && elExt.addEventListener('change', () => btnSave && btnSave.classList.remove('hidden'));
+  })();
+</script>
+
+

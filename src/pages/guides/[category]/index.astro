@@ -1,0 +1,29 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import GuideCard from '../../../components/GuideCard.astro';
+import SearchOverlay from '../../../components/SearchOverlay.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('guides');
+  const categories = Array.from(new Set(entries.map(e => e.data.category)));
+  return categories.map((c) => ({ params: { category: c } }));
+}
+
+const { category } = Astro.params;
+const all = await getCollection('guides');
+const list = all.filter(e => e.data.category === category)
+  .sort((a,b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate));
+---
+
+<BaseLayout title={`Guides: ${category}`} description={`All ${category} guides.`}>
+  <Fragment slot="search"><SearchOverlay /></Fragment>
+  <section class="mx-auto max-w-7xl px-4 mt-8">
+    <h1 class="text-3xl font-extrabold capitalize">{category}</h1>
+    <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {list.map(g => (
+        <GuideCard href={`/guides/${g.slug}/`} title={g.data.title} description={g.data.description} tag={g.data.category} readingTime={g.data.readingTime} cover={g.data.cover} />
+      ))}
+    </div>
+  </section>
+</BaseLayout>

@@ -56,3 +56,23 @@ body {
   border: 1px solid color-mix(in oklab, var(--color-border), transparent 50%);
 }
 
+/* Markdown callouts via blockquote + bold prefix */
+.prose blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  background: color-mix(in oklab, var(--color-surface), transparent 40%);
+  border-radius: 8px;
+}
+.prose blockquote strong {
+  font-weight: 700;
+}
+.prose blockquote:has(strong:contains("Info:")) {
+  border-left-color: var(--color-accent);
+}
+.prose blockquote:has(strong:contains("Warning:")) {
+  border-left-color: #E0B400;
+}
+.prose blockquote:has(strong:contains("Pro Tip:")) {
+  border-left-color: var(--color-accent2);
+}

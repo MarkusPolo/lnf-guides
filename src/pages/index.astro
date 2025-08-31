@@ -3,6 +3,7 @@ import SearchOverlay from '../components/SearchOverlay.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import GuideCard from '../components/GuideCard.astro';
 import { getCollection } from 'astro:content';
+import NewsletterBar from '../components/NewsletterBar.astro';
 
 const guides = (await getCollection('guides')).sort((a, b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate)).slice(0, 6);
 const news = (await getCollection('news')).sort((a, b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate)).slice(0, 3);
@@ -22,6 +23,10 @@ const news = (await getCollection('news')).sort((a, b) => +new Date(b.data.pubDa
     <div class="card p-6">
       <p class="text-sm text-text2">Unofficial fan site. Not affiliated with Hello Games.</p>
     </div>
+  </section>
+
+  <section class="mx-auto max-w-7xl px-4">
+    <NewsletterBar />
   </section>
 
   <section class="mx-auto max-w-7xl px-4 mt-14">

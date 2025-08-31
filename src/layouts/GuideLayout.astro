@@ -3,6 +3,8 @@ import BaseLayout from './BaseLayout.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import TOC from '../components/TOC.astro';
 import SearchOverlay from '../components/SearchOverlay.astro';
+import AdsSlot from '../components/AdsSlot.astro';
+import CommentsGiscus from '../components/CommentsGiscus.astro';
 
 const { frontmatter, headings } = Astro.props as {
   frontmatter: any;
@@ -51,9 +53,27 @@ if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length)
       {frontmatter.cover && (
         <img src={frontmatter.cover} alt={frontmatter.title} loading="lazy" decoding="async" class="w-full aspect-[16/9] object-cover rounded-card shadow-soft border border-border/60" />
       )}
+       <!-- Ad nach Hero -->
+      <AdsSlot name="article-top" height={180} class="mt-6" />
+
       <slot />
+
+      <!-- Ad am Artikelende -->
+      <AdsSlot name="article-bottom" height={280} class="mt-8" />
     </article>
     <div class="hidden lg:block"></div>
+    <div class="lg:col-start-2 lg:col-end-3">
+      <CommentsGiscus
+        repo="MarkusPolo/lnf-guides"
+        repoId="R_kgDOPnP3Sw"
+        category="General"
+        categoryId="DIC_kwDOPnP3S84Cu0C0"
+        mapping="pathname"
+        lang="en"
+        theme="preferred_color_scheme"
+      />
+    </div>
+
   </div>
 
   <script type="application/ld+json">{JSON.stringify(articleLD)}</script>

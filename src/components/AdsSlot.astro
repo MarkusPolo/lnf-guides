@@ -1,0 +1,26 @@
+---
+interface Props { name: string; height?: number; class?: string; }
+const { name, height = 280, class: cls = '' } = Astro.props as Props;
+---
+
+<div class={`ad-slot card border-dashed ${cls}`} style={`min-height:${height}px`} data-name={name} data-consent="ads" aria-label={`Ad slot: ${name}`}>
+  <div class="h-full w-full flex items-center justify-center text-xs text-text2">Ad placeholder: {name}</div>
+</div>
+
+<script>
+  // @ts-nocheck
+  (function () {
+    const slot = document.currentScript && document.currentScript.previousElementSibling;
+    function renderAd() {
+      const cons = window && window['consent'];
+      const c = cons && cons.get ? cons.get() : null;
+      if (!slot || !c) return;
+      if (c.ads) slot.classList.remove('border-dashed');
+      else slot.classList.add('border-dashed');
+    }
+    renderAd();
+    window.addEventListener('consent:changed', renderAd);
+  })();
+</script>
+
+

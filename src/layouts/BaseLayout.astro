@@ -1,5 +1,7 @@
 ---
 import "../styles/global.css";
+import ConsentBanner from "../components/ConsentBanner.astro";
+const { /* ... */ } = Astro.props;
 
 const {
   title = 'LNF Guides',
@@ -137,5 +139,27 @@ const PLAUSIBLE_DOMAIN = 'lnf-guides.example';
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))
       );
     </script>
+        <!-- Consent core (global) -->
+    <script>
+      // @ts-nocheck
+      (function () {
+        const KEY = 'lnf-consent';
+        const defaults = { ads: false, external: false, ts: 0 };
+        const read = () => {
+          try { return Object.assign({}, defaults, JSON.parse(localStorage.getItem(KEY) || '{}')); }
+          catch { return { ...defaults }; }
+        };
+        const write = (v) => {
+          localStorage.setItem(KEY, JSON.stringify(v));
+          window.dispatchEvent(new CustomEvent('consent:changed', { detail: v }));
+        };
+        const set = (partial) => write({ ...read(), ...partial, ts: Date.now() });
+        const setAll = (value) => write({ ads: value, external: value, ts: Date.now() });
+        const decided = () => !!read().ts;
+
+        window.consent = { get: read, set, setAll, decided, KEY };
+      })();
+    </script>
+    <ConsentBanner />
   </body>
 </html>
