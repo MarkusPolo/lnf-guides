@@ -1,0 +1,59 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import TOC from '../components/TOC.astro';
+
+const { frontmatter, headings } = Astro.props as {
+  frontmatter: any;
+  headings: { depth: number; slug: string; text: string }[];
+};
+
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const pubISO = new Date(frontmatter.pubDate).toISOString();
+const updISO = frontmatter.updatedDate ? new Date(frontmatter.updatedDate).toISOString() : undefined;
+
+const articleLD = {
+  '@context': 'https://schema.org',
+  '@type': frontmatter?.schema?.type || 'Article',
+  headline: frontmatter.title,
+  description: frontmatter.description,
+  datePublished: pubISO,
+  ...(updISO ? { dateModified: updISO } : {}),
+  image: frontmatter.cover ? [frontmatter.cover] : undefined,
+  mainEntityOfPage: String(canonical)
+};
+
+if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length) {
+  Object.assign(articleLD, {
+    '@type': 'FAQPage',
+    mainEntity: frontmatter.schema.faq.map((qa: any) => ({
+      '@type': 'Question',
+      name: qa.q,
+      acceptedAnswer: { '@type': 'Answer', text: qa.a }
+    }))
+  });
+}
+---
+
+<BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} ogImage={frontmatter.cover}>
+
+  <div class="mx-auto max-w-7xl px-4 mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(720px,760px)_1fr]">
+    <div class="hidden lg:block"><TOC headings={headings} /></div>
+    <article class="prose prose-invert max-w-[760px]">
+      <Breadcrumbs items={[{name:'Guides', href:'/guides/'},{name:frontmatter.category, href:`/guides/${frontmatter.category}/`},{name:frontmatter.title}]} />
+      <h1>{frontmatter.title}</h1>
+      <p class="text-sm text-text2">
+        <time datetime={pubISO}>{new Date(frontmatter.pubDate).toLocaleDateString('en-US')}</time>
+        {frontmatter.updatedDate && <span> • Updated <time datetime={updISO}>{new Date(frontmatter.updatedDate).toLocaleDateString('en-US')}</time></span>}
+        {frontmatter.readingTime && <span> • {frontmatter.readingTime} min read</span>}
+      </p>
+      {frontmatter.cover && (
+        <img src={frontmatter.cover} alt={frontmatter.title} loading="lazy" decoding="async" class="w-full aspect-[16/9] object-cover rounded-card shadow-soft border border-border/60" />
+      )}
+      <slot />
+    </article>
+    <div class="hidden lg:block"></div>
+  </div>
+
+  <script type="application/ld+json">{JSON.stringify(articleLD)}</script>
+</BaseLayout>

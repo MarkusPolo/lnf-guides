@@ -1,0 +1,16 @@
+---
+const { headings = [] } = Astro.props as { headings: { depth: number; slug: string; text: string }[] };
+const list = headings.filter(h => h.depth === 2 || h.depth === 3);
+---
+<aside class="text-sm">
+  <div class="sticky top-28 p-4 card">
+    <h3 class="font-semibold mb-2">Contents</h3>
+    <ul class="space-y-1">
+      {list.map(h => (
+        <li class={`pl-${h.depth === 3 ? '4' : '0'}`}>
+          <a href={`#${h.slug}`} class="block hover:underline">{h.text}</a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</aside>

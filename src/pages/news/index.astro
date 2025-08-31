@@ -1,0 +1,20 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GuideCard from '../../components/GuideCard.astro';
+import { getCollection } from 'astro:content';
+import SearchOverlay from '../components/SearchOverlay.astro';
+
+const list = (await getCollection('news')).sort((a,b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate));
+---
+
+<BaseLayout title="News" description="Pre-launch news & trailer breakdowns for Light No Fire.">
+  <Fragment slot="search"><SearchOverlay /></Fragment>
+  <section class="mx-auto max-w-7xl px-4 mt-8">
+    <h1 class="text-3xl font-extrabold">News</h1>
+    <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {list.map(n => (
+        <GuideCard href={`/news/${n.slug}/`} title={n.data.title} description={n.data.description} readingTime={n.data.readingTime} cover={n.data.cover} />
+      ))}
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,25 @@
+---
+interface Crumb { name: string; href?: string }
+const { items = [] as Crumb[] } = Astro.props;
+const site = Astro.site?.origin ?? '';
+const itemListElement = items.map((c, i) => ({
+  '@type': 'ListItem', position: i + 1, name: c.name, item: c.href ? site + c.href : undefined
+}));
+---
+<nav aria-label="Breadcrumb" class="text-sm text-text2 mb-4">
+  <ol class="flex flex-wrap items-center gap-2">
+    {items.map((c, i) => (
+      <li>
+        {c.href ? <a href={c.href} class="hover:underline">{c.name}</a> : <span aria-current="page">{c.name}</span>}
+        {i < items.length - 1 ? <span class="mx-2 text-border">/</span> : null}
+      </li>
+    ))}
+  </ol>
+  <script type="application/ld+json">
+    {JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement
+    })}
+  </script>
+</nav>

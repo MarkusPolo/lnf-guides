@@ -1,0 +1,134 @@
+---
+const limit = 12;
+---
+
+<div id="search-overlay" class="fixed inset-0 hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-black/70" id="search-backdrop"></div>
+  <div role="dialog" aria-modal="true" aria-label="Site search"
+       class="relative z-10 mx-auto mt-24 max-w-3xl rounded-[--radius-card] bg-surface border border-border/60 shadow-[--shadow-soft]">
+    <div class="p-4 border-b border-border/60">
+      <input id="search-input" type="search" placeholder="Search guides, news, updates..."
+             class="w-full bg-bg border border-border/60 rounded-full px-4 py-3 outline-none"
+             autocomplete="off" />
+    </div>
+    <div id="search-results" class="max-h-[60vh] overflow-auto p-2 divide-y divide-border/50"></div>
+  </div>
+</div>
+
+<script>
+  let overlay, input, results, backdrop;
+  let pagefindReady = false;
+  let pagefindInstance = null;
+  let open = false;
+  let activeIndex = -1;
+  let items = [];
+  let unavailable = false;
+
+  function toggle(state) {
+    open = state ?? !open;
+    overlay.classList.toggle('hidden', !open);
+    document.body.style.overflow = open ? 'hidden' : '';
+    if (open) {
+      input.focus();
+      ensurePagefindLoaded();
+    } else {
+      input.value = '';
+      results.innerHTML = '';
+      activeIndex = -1;
+      items = [];
+    }
+  }
+
+  function loadScriptOnce(src) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[data-pagefind]`)) {
+        resolve();
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.defer = true;
+      s.dataset.pagefind = 'true';
+      s.onload = () => resolve();
+      s.onerror = (e) => reject(e);
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensurePagefindLoaded() {
+    if (pagefindReady || unavailable) return;
+    // In dev existiert die Datei nicht → Hinweis rendern
+    const src = `${location.origin}/pagefind/pagefind.js`;
+    try {
+      await loadScriptOnce(src);
+      // Warten bis global verfügbar (Pagefind hängt sich an window)
+      const maxWait = 40; // ~2s
+      let tries = 0;
+      while (!window.Pagefind && tries < maxWait) {
+        await new Promise(r => setTimeout(r, 50));
+        tries++;
+      }
+      if (!window.Pagefind) throw new Error('Pagefind global not found');
+      pagefindInstance = await new window.Pagefind();
+      pagefindReady = true;
+    } catch (e) {
+      unavailable = true;
+      console.warn('Pagefind index not available (dev). Run build to generate it.', e);
+      results.innerHTML = `<div class="p-3 text-sm text-text2">
+        Search index not available in dev. Run <code>npm run build</code> then <code>npm run preview</code>.
+      </div>`;
+    }
+  }
+
+  async function renderResults(q) {
+    if (!pagefindReady || !q?.trim()) { results.innerHTML = ''; return; }
+    const r = await pagefindInstance.search(q.trim());
+    items = await Promise.all(r.results.slice(0, limit).map((x: any) => x.data()));
+
+    results.innerHTML = items.map((it, i) => `
+      <a href="${it.url}" class="block p-3 hover:bg-bg/60 focus:bg-bg/60 outline-none ${i===activeIndex?'bg-bg/60':''}">
+        <div class="flex items-center gap-2 text-xs text-text2 mb-1">
+          <span class="px-2 py-0.5 rounded-full bg-border/40">${(it.excerpt?.match(/\[(.*?)\]/)?.[1] ?? '').toUpperCase()}</span>
+          <span>${new URL(it.url, location.origin).pathname}</span>
+        </div>
+        <div class="font-semibold">${it.meta?.title ?? it.url}</div>
+        <p class="text-sm text-text2 line-clamp-2">${it.excerpt ?? ''}</p>
+      </a>
+    `).join('');
+  }
+
+  function onKey(e) {
+    if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === 'F' && e.ctrlKey)) {
+      e.preventDefault(); toggle(true);
+    } else if (open && e.key === 'Escape') {
+      toggle(false);
+    } else if (open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      e.preventDefault();
+      const dir = e.key === 'ArrowDown' ? 1 : -1;
+      activeIndex = Math.max(0, Math.min((items.length - 1), activeIndex + dir));
+      renderResults(input.value);
+      focusActive();
+    } else if (open && e.key === 'Enter' && activeIndex >= 0) {
+      const links = results.querySelectorAll('a');
+      links[activeIndex]?.click();
+    }
+  }
+
+  function focusActive() {
+    const links = results.querySelectorAll('a');
+    links.forEach((a, idx) => { if (idx === activeIndex) a.focus(); });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    overlay = document.getElementById('search-overlay');
+    input = document.getElementById('search-input');
+    results = document.getElementById('search-results');
+    backdrop = document.getElementById('search-backdrop');
+
+    backdrop.addEventListener('click', () => toggle(false));
+    input.addEventListener('input', (e) => renderResults(e.target.value));
+  });
+
+  window.addEventListener('keydown', onKey);
+</script>

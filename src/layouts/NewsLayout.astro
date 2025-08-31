@@ -1,0 +1,27 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+const { frontmatter } = Astro.props as any;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const pubISO = new Date(frontmatter.pubDate).toISOString();
+
+const articleLD = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: frontmatter.title,
+  description: frontmatter.description,
+  datePublished: pubISO,
+  image: frontmatter.cover ? [frontmatter.cover] : undefined,
+  mainEntityOfPage: String(canonical)
+};
+---
+
+<BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} ogImage={frontmatter.cover}>
+  <article class="mx-auto max-w-3xl px-4 mt-8 prose">
+    <h1>{frontmatter.title}</h1>
+    <p class="text-sm text-text2"><time datetime={pubISO}>{new Date(frontmatter.pubDate).toLocaleDateString('en-US')}</time></p>
+    {frontmatter.cover && <img src={frontmatter.cover} alt={frontmatter.title} loading="lazy" decoding="async" class="w-full aspect-[16/9] object-cover" />}
+    <slot />
+  </article>
+  <script type="application/ld+json">{JSON.stringify(articleLD)}</script>
+</BaseLayout>

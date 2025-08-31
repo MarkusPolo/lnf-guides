@@ -1,0 +1,25 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GuideCard from '../../components/GuideCard.astro';
+import { getCollection } from 'astro:content';
+import SearchOverlay from '../components/SearchOverlay.astro';
+
+const guides = (await getCollection('guides')).sort((a, b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate));
+const categories = Array.from(new Set(guides.map(g => g.data.category)));
+---
+
+<BaseLayout title="Guides" description="All Light No Fire guides by category and tags.">
+  <Fragment slot="search"><SearchOverlay /></Fragment>
+  <section class="mx-auto max-w-7xl px-4 mt-8">
+    <h1 class="text-3xl font-extrabold">Guides</h1>
+    <div class="mt-4 flex flex-wrap gap-2">
+      {categories.map(c => <a href={`/guides/${c}/`} class="px-3 py-1 rounded-full border border-border/60 hover:bg-surface">{c}</a>)}
+    </div>
+
+    <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {guides.map(g => (
+        <GuideCard href={`/guides/${g.slug}/`} title={g.data.title} description={g.data.description} tag={g.data.category} readingTime={g.data.readingTime} cover={g.data.cover} />
+      ))}
+    </div>
+  </section>
+</BaseLayout>

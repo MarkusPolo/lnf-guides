@@ -1,0 +1,44 @@
+---
+import SearchOverlay from '../components/SearchOverlay.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import GuideCard from '../components/GuideCard.astro';
+import { getCollection } from 'astro:content';
+
+const guides = (await getCollection('guides')).sort((a, b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate)).slice(0, 6);
+const news = (await getCollection('news')).sort((a, b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate)).slice(0, 3);
+---
+
+<BaseLayout title="Master Light No Fire at launch" description="Crisp guides, spoiler-safe tips, and meta updates – built by players, for players.">
+  <Fragment slot="search"><SearchOverlay /></Fragment>
+  <section class="mx-auto max-w-7xl px-4 mt-10 grid gap-6 md:grid-cols-2 items-center">
+    <div>
+      <h1 class="text-4xl md:text-5xl font-extrabold">Master Light No Fire at launch</h1>
+      <p class="text-text2 mt-4">Crisp guides, spoiler-safe tips, and meta updates – built by players, for players.</p>
+      <div class="mt-6 flex gap-3">
+        <a href="/guides/beginners/" class="btn btn-primary">Read Beginner’s Guide</a>
+        <a href="/news/" class="btn btn-outline">Latest News</a>
+      </div>
+    </div>
+    <div class="card p-6">
+      <p class="text-sm text-text2">Unofficial fan site. Not affiliated with Hello Games.</p>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-7xl px-4 mt-14">
+    <h2 class="text-2xl font-bold mb-4">Featured Guides</h2>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {guides.map(g => (
+        <GuideCard href={`/guides/${g.slug}/`} title={g.data.title} description={g.data.description} tag={g.data.category} readingTime={g.data.readingTime} cover={g.data.cover} />
+      ))}
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-7xl px-4 mt-14">
+    <h2 class="text-2xl font-bold mb-4">Latest News</h2>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {news.map(n => (
+        <GuideCard href={`/news/${n.slug}/`} title={n.data.title} description={n.data.description} readingTime={n.data.readingTime} cover={n.data.cover} />
+      ))}
+    </div>
+  </section>
+</BaseLayout>

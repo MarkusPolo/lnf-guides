@@ -1,0 +1,30 @@
+---
+import { getCollection } from 'astro:content';
+import NewsLayout from '../../../../layouts/NewsLayout.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('news');
+  return entries.map((e) => {
+    const parts = e.slug.split('/'); // z.B. ["2025","08","trailer-analysis"]
+    return {
+      params: {
+        year: parts[0],
+        month: parts[1],
+        slug: parts.slice(2).join('/'),
+      },
+    };
+  });
+}
+
+const { year, month, slug } = Astro.params;
+const entry = (await getCollection('news')).find((e) => e.slug === `${year}/${month}/${slug}`);
+if (!entry) return Astro.redirect('/404');
+
+const { Content } = await entry.render();
+const fm = entry.data;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<NewsLayout frontmatter={fm} canonical={canonical}>
+  <Content />
+</NewsLayout>
