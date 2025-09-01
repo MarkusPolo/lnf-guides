@@ -1,108 +1,81 @@
 ---
 import "../styles/global.css";
 import ConsentBanner from "../components/ConsentBanner.astro";
+import DebugConsent from "../components/DebugConsent.astro";
 
-// Props
-interface Props {
-  title: string;
-  description?: string;
-  canonical?: URL | string;
-  ogImage?: string;
-  type?: 'website' | 'article';
-  category?: string;      // für OG-Fallbacks (z.B. 'dragons', 'beginners')
-  noindex?: boolean;
-}
-const {
-  title,
-  description = "Crisp guides, spoiler-safe tips, and meta updates for Light No Fire.",
-  canonical,
-  ogImage,
-  type = "website",
-  category,
-  noindex = false,
-} = Astro.props as Props;
+const { title, description, canonical, ogImage, type = 'website', category } = Astro.props as any;
 
-// Site / Canonical
-const SITE = String(Astro.site ?? "https://lnf-guides.com");
-const canonicalURL =
-  typeof canonical === "string"
-    ? canonical
-    : canonical instanceof URL
-      ? canonical.toString()
-      : new URL(Astro.url.pathname, Astro.site).toString();
+const site = Astro.site?.origin ?? 'https://lnf-guides.com';
+const url = canonical ?? new URL(Astro.url.pathname, site);
+const siteUrl = String(Astro.site ?? site);
 
-// OG-Fallbacks
-const ogFallbackByCategory: Record<string, string> = {
-  dragons: "/images/og/dragons.png",
-  beginners: "/images/og/beginners.png",
+const ogFallbackByCategory: Record<string,string> = {
+  dragons: '/images/og/dragons.png',
+  beginners: '/images/og/beginners.png',
 };
-const finalOg = ogImage || (category ? ogFallbackByCategory[category] : undefined) || "/images/og/default.png";
-const siteName = "LNF Guides";
-const twitterHandle = "@lnfguides"; // optional
+const finalOg = ogImage || ogFallbackByCategory[category] || '/images/og/default.png';
+const PLAUSIBLE_DOMAIN = 'lnf-guides.com';
 ---
 
 <html lang="en" class="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="canonical" href={String(url)} />
 
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={canonicalURL} />
-    {noindex ? <meta name="robots" content="noindex,nofollow" /> : <meta name="robots" content="index,follow,max-image-preview:large" />}
+    <link rel="canonical" href={String(canonical)} />
 
-    <!-- Open Graph -->
+    <!-- OG / Twitter -->
     <meta property="og:type" content={type} />
-    <meta property="og:site_name" content={siteName} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:url" content={String(canonical)} />
     <meta property="og:image" content={finalOg} />
-    <meta property="og:image:alt" content={`${title} · ${siteName}`} />
+    <meta property="og:site_name" content="LNF Guides" />
 
-    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={finalOg} />
-    <meta name="twitter:site" content={twitterHandle} />
 
-    <!-- Icons -->
     <link rel="icon" href="/images/logo.svg" type="image/svg+xml" />
+
+    <!-- JSON-LD: WebSite -->
+    <script type="application/ld+json">
+      {JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "url": siteUrl,
+        "name": "LNF Guides",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": `${siteUrl}/search?q={query}`,
+          "query-input": "required name=query"
+        }
+      })}
+    </script>
 
     <!-- JSON-LD: Organization -->
     <script type="application/ld+json">
       {JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Organization",
-        name: siteName,
-        url: SITE,
-        logo: `${SITE}/images/logo.svg`,
-        sameAs: ["https://github.com/MarkusPolo/lnf-guides"],
+        "name": "LNF Guides",
+        "url": siteUrl,
+        "logo": `${siteUrl}/images/logo.svg`,
+        "sameAs": ["https://github.com/lnf-guides"]
       })}
     </script>
 
-    <!-- JSON-LD: WebSite + SearchAction -->
-    <script type="application/ld+json">
-      {JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        url: SITE,
-        name: siteName,
-        potentialAction: {
-          "@type": "SearchAction",
-          target: `${SITE}/guides/?q={search_term_string}`,
-          "query-input": "required name=search_term_string",
-        },
-      })}
-    </script>
+    <!-- Plausible (nur geladen, wenn consent.analytics true ist; Gate im Body-Script) -->
+    <script id="plausible-script" defer data-domain={PLAUSIBLE_DOMAIN} src="https://plausible.io/js/script.js"></script>
   </head>
-
   <body class="font-sans">
     <a href="#content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:bg-surface focus:px-3 focus:py-2 focus:rounded">Skip to content</a>
 
-    <!-- Header (inline, wie bei dir zuvor) -->
-    <header class="sticky top-0 z-[1000] isolate border-b border-border/60 bg-bg/95 backdrop-blur">
+    <header class="sticky top-0 z-[1000] isolate border-b border-border/60 bg-bg backdrop-blur">
       <div class="mx-auto max-w-7xl px-4 py-3 flex items-center gap-4">
         <a href="/" class="flex items-center gap-2">
           <img src="/images/logo.svg" alt="LNF Guides" class="h-7 w-7" />
@@ -110,11 +83,7 @@ const twitterHandle = "@lnfguides"; // optional
         </a>
 
         <div class="flex-1 max-w-xl mx-auto hidden md:block">
-          <button
-            id="open-search"
-            class="w-full text-left border border-border/60 rounded-full px-4 py-2 text-text2 hover:bg-surface"
-            aria-label="Open search (Cmd/Ctrl+K)"
-          >
+          <button id="open-search" class="w-full text-left border border-border/60 rounded-full px-4 py-2 text-text2 hover:bg-surface" aria-label="Open search (Cmd/Ctrl+K)">
             Press ⌘/Ctrl K to search…
           </button>
         </div>
@@ -124,20 +93,15 @@ const twitterHandle = "@lnfguides"; // optional
           <a href="/news/" class="hover:underline">News</a>
           <a href="/updates/" class="hover:underline">Updates</a>
           <a href="/about/" class="hover:underline">About</a>
-          <a href="https://discord.gg/" class="btn btn-outline">Discord</a>
+          <button id="btn-privacy" class="btn btn-outline">Manage privacy</button>
           <a href="/contact/" class="btn btn-primary">Subscribe</a>
         </nav>
       </div>
     </header>
 
-    <!-- Optionaler Search-Slot -->
     <slot name="search" />
+    <main id="content"><slot /></main>
 
-    <main id="content">
-      <slot />
-    </main>
-
-    <!-- Footer (inline) -->
     <footer class="mt-16 border-t border-border/60">
       <div class="mx-auto max-w-7xl px-4 py-12 grid gap-8 md:grid-cols-4 text-sm">
         <section>
@@ -150,27 +114,15 @@ const twitterHandle = "@lnfguides"; // optional
           </ul>
         </section>
         <section>
-          <h3 class="font-semibold mb-3">Categories</h3>
-          <ul class="space-y-2">
-            <li><a href="/guides/beginners/">Beginners</a></li>
-            <li><a href="/guides/dragons/">Dragons</a></li>
-            <li><a href="/guides/crafting/">Crafting</a></li>
-            <li><a href="/guides/exploration/">Exploration</a></li>
-          </ul>
-        </section>
-        <section>
           <h3 class="font-semibold mb-3">Legal</h3>
           <ul class="space-y-2">
-            <li><a href="/legal/">Legal</a></li>
             <li><a href="/privacy/">Privacy</a></li>
             <li><a href="/contact/">Contact</a></li>
           </ul>
         </section>
-        <section>
-          <h3 class="font-semibold mb-3">Social</h3>
-          <ul class="space-y-2">
-            <li><a href="https://github.com/lnf-guides">GitHub</a></li>
-          </ul>
+        <section class="md:col-span-2">
+          <h3 class="font-semibold mb-3">Controls</h3>
+          <button id="btn-privacy-footer" class="btn btn-outline">Manage privacy</button>
         </section>
       </div>
       <div class="mx-auto max-w-7xl px-4 pb-10 text-xs text-text2">
@@ -178,62 +130,42 @@ const twitterHandle = "@lnfguides"; // optional
       </div>
     </footer>
 
-    <!-- Search-Button: öffnet Overlay via KeyboardEvent -->
+    <!-- Search trigger -->
     <script>
       document.getElementById('open-search')?.addEventListener('click', () =>
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))
       );
     </script>
 
-    <!-- Consent core (global) – unverändert beibehalten -->
+    <!-- Consent: open from header/footer -->
     <script>
-      // @ts-nocheck
-      (function () {
-        const KEY = 'lnf-consent';
-        const defaults = { ads: false, external: false, ts: 0 };
-        const read = () => {
-          try { return Object.assign({}, defaults, JSON.parse(localStorage.getItem(KEY) || '{}')); }
-          catch { return { ...defaults }; }
-        };
-        const write = (v) => {
-          localStorage.setItem(KEY, JSON.stringify(v));
-          window.dispatchEvent(new CustomEvent('consent:changed', { detail: v }));
-        };
-        const set = (partial) => write({ ...read(), ...partial, ts: Date.now() });
-        const setAll = (value) => write({ ads: value, external: value, ts: Date.now() });
-        const decided = () => !!read().ts;
-
-        // global
-        window.consent = { get: read, set, setAll, decided, KEY };
-      })();
+      document.getElementById('btn-privacy')?.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('consent:open'));
+      });
+      document.getElementById('btn-privacy-footer')?.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('consent:open'));
+      });
     </script>
 
-    <!-- Plausible: nur laden, falls consent.external === true -->
+    <!-- Analytics gate: disable Plausible unless analytics consent -->
     <script>
-      // @ts-nocheck
-      (function () {
-        function loadPlausible() {
+      (function(){
+        var s = document.getElementById('plausible-script');
+        function apply(){
           try {
-            if (!window.consent?.get) return;
-            const { external } = window.consent.get();
-            if (!external) return;
-            if (document.getElementById('plausible-src')) return;
-            const s = document.createElement('script');
-            s.id = 'plausible-src';
-            s.defer = true;
-            // Domain dynamisch aus Host ableiten, oder fix setzen:
-            s.setAttribute('data-domain', location.hostname);
-            s.src = 'https://plausible.io/js/script.js';
-            document.head.appendChild(s);
-          } catch {}
+            var c = window.consent?.get?.() || {};
+            var ok = c?.decisions ? !!c.decisions.analytics : !!c.analytics;
+            if (!ok && s) {
+              s.remove(); // prevent load
+            }
+          } catch(e){}
         }
-        // sofort versuchen
-        loadPlausible();
-        // bei Änderungen vom Banner erneut prüfen
-        window.addEventListener('consent:changed', loadPlausible);
+        apply();
+        window.addEventListener('consent:changed', apply);
       })();
     </script>
 
     <ConsentBanner />
+    <DebugConsent />
   </body>
 </html>

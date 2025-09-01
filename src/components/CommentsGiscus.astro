@@ -1,113 +1,125 @@
 ---
 interface Props {
-  repo: string;        // z.B. "MarkusPolo/lnf-guides"
-  repoId?: string;
-  category?: string;
-  categoryId?: string;
-  mapping?: string;    // "pathname" | "title" | ...
-  lang?: string;       // "en"
-  theme?: string;      // "dark" | "preferred_color_scheme" | ...
+  repo: string;
+  repoId: string;
+  category: string;
+  categoryId: string;
+  mapping?: string;
+  lang?: string;
+  theme?: string;
+  class?: string;
 }
-
 const {
-  repo = '',
-  repoId = '',
-  category = '',
-  categoryId = '',
-  mapping = 'pathname',
-  lang = 'en',
-  theme = 'dark',
+  repo,
+  repoId,
+  category,
+  categoryId,
+  mapping = "pathname",
+  lang = "en",
+  theme = "preferred_color_scheme",
+  class: cls = "",
 } = Astro.props as Props;
 
-const canRender = !!repo;
+const hostId = `giscus-host-${Math.random().toString(36).slice(2)}`;
+const cfg = { repo, repoId, category, categoryId, mapping, lang, theme };
 ---
 
-{canRender && (
-  <section class="mt-12" id="comments">
-    <div class="card p-4 md:p-5 w-full">
-      <div class="font-semibold mb-2">Comments</div>
-      <div id="giscus_thread" class="min-h-[200px]"></div>
-      <div id="giscus_guard" class="text-sm text-text2"></div>
+<section class={`mt-10 ${cls}`}>
+  <div class="rounded-card border border-border/60 bg-[#0f1422] p-4 shadow-soft">
+    <h2 class="text-lg font-extrabold mb-3">Comments</h2>
+    <div id={hostId} class="min-h-[200px]">
+      <div class="text-sm text-text2">
+        Comments are blocked until you enable <strong>External embeds</strong> in your privacy settings.
+        <button type="button" class="underline ml-1" data-giscus-open-privacy>Manage privacy</button>
+      </div>
     </div>
+  </div>
+</section>
 
-    <!-- Konfiguration sicher über data-Attribute -->
-    <div id="giscus_cfg"
-         data-repo={repo}
-         data-repo-id={repoId}
-         data-category={category}
-         data-category-id={categoryId}
-         data-mapping={mapping}
-         data-lang={lang}
-         data-theme={theme}
-         hidden></div>
-  </section>
-)}
+<script define:vars={{ hostId, cfg }}>
+  // @ts-nocheck
+  (function () {
+    const STORAGE_KEY = "lnf-consent";
 
-{canRender ? (
-  <script is:inline>
-    // @ts-nocheck
-    (function () {
-      const cfgEl = document.getElementById('giscus_cfg');
-      const mount = document.getElementById('giscus_thread');
-      const guard = document.getElementById('giscus_guard');
+    let mounted = false;
+    let pollTimer = null;
 
-      function loadGiscus() {
-        if (!mount || !cfgEl) return;
-        if (document.querySelector('script[data-giscus]')) return;
+    function getState() {
+      try {
+        const viaApi = window.consent?.get?.();
+        if (viaApi && typeof viaApi === "object") return viaApi;
+      } catch {}
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch { return null; }
+    }
+    function allowExternal() {
+      const s = getState();
+      return !!s?.decisions?.external;
+    }
 
-        const d = cfgEl && cfgEl.dataset ? cfgEl.dataset : {};
-        const s = document.createElement('script');
-        s.src = 'https://giscus.app/client.js';
-        s.async = true;
-        s.crossOrigin = 'anonymous';
-        s.setAttribute('data-giscus', 'true');
-
-        if (d.repo)        s.setAttribute('data-repo', d.repo);
-        if (d.repoId)      s.setAttribute('data-repo-id', d.repoId);
-        if (d.category)    s.setAttribute('data-category', d.category);
-        if (d.categoryId)  s.setAttribute('data-category-id', d.categoryId);
-
-        s.setAttribute('data-mapping', d.mapping || 'pathname');
-        s.setAttribute('data-strict', '0');
-        s.setAttribute('data-reactions-enabled', '1');
-        s.setAttribute('data-emit-metadata', '0');
-        s.setAttribute('data-input-position', 'bottom');
-        s.setAttribute('data-theme', d.theme || 'dark');
-        s.setAttribute('data-lang', d.lang || 'en');
-        s.setAttribute('data-loading', 'lazy');
-
-        mount.appendChild(s);
+    function mountGiscus() {
+      const host = document.getElementById(hostId);
+      if (!host) return;
+      if (host.querySelector("iframe.giscus-frame") || document.getElementById("giscus-script")) {
+        mounted = true;
+        return;
       }
+      const s = document.createElement("script");
+      s.src = "https://giscus.app/client.js";
+      s.async = true;
+      s.crossOrigin = "anonymous";
+      s.id = "giscus-script";
+      s.setAttribute("data-repo", cfg.repo);
+      s.setAttribute("data-repo-id", cfg.repoId);
+      s.setAttribute("data-category", cfg.category);
+      s.setAttribute("data-category-id", cfg.categoryId);
+      s.setAttribute("data-mapping", cfg.mapping);
+      s.setAttribute("data-strict", "0");
+      s.setAttribute("data-reactions-enabled", "1");
+      s.setAttribute("data-emit-metadata", "0");
+      s.setAttribute("data-input-position", "bottom");
+      s.setAttribute("data-theme", cfg.theme);
+      s.setAttribute("data-lang", cfg.lang);
+      host.innerHTML = "";
+      host.appendChild(s);
+      mounted = true;
+    }
 
-      function renderCTA() {
-        if (!guard) return;
-        guard.innerHTML = `
-          <div class="mt-3 flex items-center gap-3">
-            <span>Comments are disabled until you enable external embeds.</span>
-            <button id="enable-ext" class="btn btn-primary">Enable</button>
-          </div>`;
-        const btn = document.getElementById('enable-ext');
-        btn && btn.addEventListener('click', () => {
-          const cons = window && window['consent'];
-          cons && cons.set && cons.set({ external: true });
-        });
+    function showBlocked() {
+      const host = document.getElementById(hostId);
+      if (!host) return;
+      host.innerHTML =
+        '<div class="text-sm text-text2">Comments are blocked until you enable <strong>External embeds</strong> in your privacy settings. <button type="button" class="underline ml-1" data-giscus-open-privacy>Manage privacy</button></div>';
+      document.getElementById("giscus-script")?.remove();
+      mounted = false;
+    }
+
+    function apply() {
+      if (allowExternal()) mountGiscus();
+      else showBlocked();
+    }
+
+    document.addEventListener("click", (e) => {
+      const t = e.target;
+      if (t && t.matches?.("[data-giscus-open-privacy]")) {
+        window.consent?.open?.();
       }
+    });
 
-      function check() {
-        const cons = window && window['consent'];
-        const c = cons && cons.get ? cons.get() : null;
-        if (c && c.external) {
-          if (guard) guard.innerHTML = '';
-          loadGiscus();
-        } else {
-          renderCTA();
-        }
+    window.addEventListener("consent:updated", apply);
+    document.addEventListener("DOMContentLoaded", () => {
+      apply();
+      if (!mounted) {
+        pollTimer = setInterval(() => {
+          if (allowExternal()) {
+            apply();
+            clearInterval(pollTimer);
+          }
+        }, 800);
+        setTimeout(() => clearInterval(pollTimer), 6000);
       }
-
-      setTimeout(check, 2000);
-      window.addEventListener('consent:changed', check);
-    })();
-  </script>
-) : (
-  <script is:inline>console.warn('Giscus repo not configured; comments hidden')</script>
-)}
+    });
+  })();
+</script>

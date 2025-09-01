@@ -1,0 +1,87 @@
+---
+/**
+ * Props:
+ *  - url: Tweet-URL (z.B. https://twitter.com/.../status/...)
+ *  - theme: "dark" | "light" (optional)
+ */
+const { url, theme = 'dark' } = Astro.props as { url: string; theme?: 'dark'|'light' };
+---
+
+{!url && (
+  <div class="rounded-card border border-border/60 bg-surface p-4 text-text2">
+    Invalid Tweet URL.
+  </div>
+)}
+
+{url && (
+  <div class="rounded-card border border-border/60 bg-surface p-4">
+    <div data-tweet="placeholder" class="text-center space-y-2">
+      <div class="text-text2 text-sm">
+        This embed loads content from X (Twitter). <a class="underline" href="/privacy/">Learn more</a>.
+      </div>
+      <div class="flex items-center justify-center gap-3">
+        <button class="btn btn-outline" data-action="allow-once">Show this tweet</button>
+        <button class="btn btn-primary" data-action="allow-always">Always allow embeds</button>
+      </div>
+    </div>
+    <div data-tweet="container" class="hidden">
+      <blockquote class="twitter-tweet" data-theme={theme}>
+        <a href={url}></a>
+      </blockquote>
+    </div>
+  </div>
+)}
+
+<script>
+  (function () {
+    var root = document.currentScript?.parentElement;
+    if (!root) return;
+    var container = root.querySelector('[data-tweet="container"]');
+    var placeholder = root.querySelector('[data-tweet="placeholder"]');
+
+    function getExternal() {
+      try {
+        var c = window.consent?.get?.() || {};
+        if (c.decisions) return !!c.decisions.external;
+        return !!c.external;
+      } catch {}
+      return false;
+    }
+    function setExternalTrue() {
+      try {
+        var c = window.consent?.get?.() || {};
+        if (c?.decisions) window.consent?.set?.({ decisions: { ...(c.decisions||{}), external: true }});
+        else window.consent?.set?.({ external: true });
+      } catch {}
+    }
+    function loadScript() {
+      return new Promise(function(res){
+        if (window.twttr && window.twttr.widgets) return res();
+        var s = document.createElement('script');
+        s.src = "https://platform.twitter.com/widgets.js";
+        s.async = true; s.defer = true;
+        s.onload = function(){ res(); };
+        document.head.appendChild(s);
+      });
+    }
+    function mount() {
+      if (!container || !placeholder) return;
+      placeholder.classList.add('hidden');
+      container.classList.remove('hidden');
+      loadScript().then(function(){
+        try { window.twttr?.widgets?.load?.(container); } catch(e){}
+      });
+    }
+
+    function update() { if (getExternal()) mount(); }
+    update();
+    window.addEventListener('consent:changed', update);
+
+    root.addEventListener('click', function(e){
+      var t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+      if (t.dataset.action === 'allow-once') mount();
+      if (t.dataset.action === 'allow-always') setExternalTrue();
+    });
+  })();
+</script>

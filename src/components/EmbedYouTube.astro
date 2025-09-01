@@ -1,0 +1,128 @@
+---
+interface Props {
+  id: string;            // z.B. "jKQem4Z6ioQ"
+  title?: string;
+  aspect?: string;       // CSS aspect-ratio, default "16/9"
+}
+
+const { id, title = 'YouTube video', aspect = '16/9' } = Astro.props;
+const src = `https://www.youtube-nocookie.com/embed/${id}?rel=0`;
+---
+
+<div
+  id={`yt-wrap-${id}`}
+  class="rounded-card border border-border/60 bg-[#0f1422] shadow-soft overflow-hidden"
+  data-yt-id={id}
+  data-yt-title={title}
+  data-yt-src={src}
+  data-yt-aspect={aspect}
+>
+  <div
+    class="relative w-full"
+    style={`aspect-ratio:${aspect}`}
+  >
+    <!-- Placeholder -->
+    <div class="absolute inset-0 flex items-center justify-center" data-yt-ph>
+      <div class="text-center px-4">
+        <p class="mb-3 text-sm text-text2">
+          YouTube placeholder (blocked until you allow external embeds)
+        </p>
+        <div class="flex items-center justify-center gap-3">
+          <button class="btn btn-outline" data-yt-play>Play video</button>
+          <button class="btn btn-primary" data-yt-allow>Always allow embeds</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-center text-xs text-text2 py-2">
+    This embed loads content from YouTube.
+    <button class="underline hover:text-text" data-yt-learn>Learn more</button>.
+  </p>
+</div>
+
+<script>
+  // Alles rein in DOM-Daten -> kein Astro-Interpolation-Problem im Script
+  (function () {
+    const root = document.currentScript?.previousElementSibling?.closest('[data-yt-id]')
+      || document.querySelector('[data-yt-id]');
+
+    if (!root) return;
+
+    const ytId    = root.getAttribute('data-yt-id');
+    const ytTitle = root.getAttribute('data-yt-title') || 'YouTube video';
+    const ytSrc   = root.getAttribute('data-yt-src') || '';
+    const ph      = root.querySelector('[data-yt-ph]');
+    const btnPlay = root.querySelector('[data-yt-play]');
+    const btnAllow= root.querySelector('[data-yt-allow]');
+    const btnLearn= root.querySelector('[data-yt-learn]');
+    const frameHost = root.querySelector('.relative.w-full');
+
+    function mountIframe() {
+      if (!frameHost) return;
+      if (frameHost.querySelector('iframe')) return; // schon da
+      const iframe = document.createElement('iframe');
+      iframe.src = ytSrc;
+      iframe.title = ytTitle;
+      iframe.width = '560';
+      iframe.height = '315';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      iframe.allowFullscreen = true;
+      iframe.className = 'absolute inset-0 w-full h-full';
+      frameHost.appendChild(iframe);
+      ph?.remove();
+    }
+
+    function hasExternalConsent() {
+      try {
+        const c = window?.consent?.get?.();
+        return !!c?.external;
+      } catch {
+        return false;
+      }
+    }
+
+    function openConsentFocusedOnExternal() {
+      // Öffnet das Consent-Modal, falls vorhanden
+      if (window?.consentUI?.open) window.consentUI.open('external');
+      else if (window?.managePrivacy) window.managePrivacy();
+    }
+
+    function init() {
+      // Initial: wenn external bereits erlaubt -> direkt mounten
+      if (hasExternalConsent()) mountIframe();
+
+      // Auf spätere Änderungen reagieren
+      window.addEventListener('consent:changed', (e) => {
+        if (e?.detail?.external) mountIframe();
+      });
+
+      // Buttons
+      btnPlay?.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        if (hasExternalConsent()) {
+          mountIframe();
+        } else {
+          openConsentFocusedOnExternal();
+        }
+      });
+
+      btnAllow?.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        // Opt-in setzen und sofort mounten
+        try {
+          window?.consent?.set?.({ external: true });
+        } catch {}
+        mountIframe();
+      });
+
+      btnLearn?.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        openConsentFocusedOnExternal();
+      });
+    }
+
+    init();
+  })();
+</script>

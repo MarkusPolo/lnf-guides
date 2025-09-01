@@ -1,0 +1,81 @@
+---
+/**
+ * Props:
+ *  - src: Google Maps Embed URL (ohne automatische Ladefreigabe)
+ *  - title: a11y title
+ */
+const { src, title = 'Map' } = Astro.props as { src: string; title?: string };
+---
+
+{!src && (
+  <div class="rounded-card border border-border/60 bg-surface p-4 text-text2">
+    Invalid map embed <code>src</code>.
+  </div>
+)}
+
+{src && (
+  <div class="rounded-card border border-border/60 bg-surface overflow-hidden">
+    <div class="aspect-[16/9] w-full" data-map="ph">
+      <div class="h-full w-full bg-[#0f1422] flex items-center justify-center">
+        <span class="text-text2">Map placeholder</span>
+      </div>
+      <div class="absolute inset-0 flex items-end justify-between p-3">
+        <div class="text-[11px] text-text2 bg-bg/80 px-2 py-1 rounded-full">Loads Google Maps on consent</div>
+        <div class="flex gap-2">
+          <button class="btn btn-outline py-1 px-3" data-action="allow-once">Show map</button>
+          <button class="btn btn-primary py-1 px-3" data-action="allow-always">Always allow embeds</button>
+        </div>
+      </div>
+    </div>
+    <div class="hidden" data-map="container"></div>
+  </div>
+)}
+
+<script>
+  (function(){
+    var root = document.currentScript?.parentElement;
+    if (!root) return;
+
+    function getExternal() {
+      try {
+        var c = window.consent?.get?.() || {};
+        if (c.decisions) return !!c.decisions.external;
+        return !!c.external;
+      } catch {}
+      return false;
+    }
+    function setExternalTrue() {
+      try {
+        var c = window.consent?.get?.() || {};
+        if (c?.decisions) window.consent?.set?.({ decisions: { ...(c.decisions||{}), external: true }});
+        else window.consent?.set?.({ external: true });
+      } catch {}
+    }
+
+    function mount() {
+      var ph = root.querySelector('[data-map="ph"]');
+      var c = root.querySelector('[data-map="container"]');
+      if (!ph || !c) return;
+      var iframe = document.createElement('iframe');
+      iframe.src = "{src}";
+      iframe.title = "{title}";
+      iframe.loading = "lazy";
+      iframe.referrerPolicy = "no-referrer";
+      iframe.className = "aspect-[16/9] w-full border-0";
+      ph.classList.add('hidden');
+      c.classList.remove('hidden');
+      c.appendChild(iframe);
+    }
+
+    function update(){ if (getExternal()) mount(); }
+    update();
+    window.addEventListener('consent:changed', update);
+
+    root.addEventListener('click', function(e){
+      var t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+      if (t.dataset.action === 'allow-once') mount();
+      if (t.dataset.action === 'allow-always') setExternalTrue();
+    });
+  })();
+</script>

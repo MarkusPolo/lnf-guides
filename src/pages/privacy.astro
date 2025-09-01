@@ -1,39 +1,111 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 
-const title = 'Privacy';
-const description = 'How we handle analytics, embeds, and your choices on LNF Guides.';
-const canonical = new URL(Astro.url.pathname, Astro.site);
+const title = 'Privacy & Cookies';
+const description = 'How we handle analytics, embeds, and ads — and how you control your data.';
+const site = Astro.site?.origin ?? 'https://lnf-guides.com';
+const canonical = new URL('/privacy/', site);
 ---
 
 <BaseLayout title={title} description={description} canonical={canonical}>
-  <section class="mx-auto max-w-3xl px-4 py-12">
-    <h1 class="text-3xl font-extrabold mb-4">{title}</h1>
-    <p class="text-text2 mb-8">
-      We aim to be lightweight and respectful. This page explains what may load and how you can control it.
+  <div class="mx-auto max-w-7xl px-4 py-12">
+    <h1 class="text-3xl font-extrabold tracking-tight">Privacy & Cookies</h1>
+    <p class="text-text2 mt-3 max-w-3xl">
+      This page explains what loads on this site, why we load it, the legal basis, and how you can control it.
     </p>
 
-    <h2 class="text-xl font-bold mt-8 mb-2">Consent</h2>
-    <p class="mb-4">
-      When you first visit, you can accept or reject optional features. You can update your choices any time using the banner or by clearing your browser storage.
-    </p>
+    <section class="mt-10">
+      <h2 class="text-2xl font-bold mb-4">Your controls</h2>
+      <div class="flex items-center gap-3">
+        <button id="open-privacy" class="btn btn-primary">Manage privacy settings</button>
+        <button id="reset-privacy" class="btn btn-outline">Reset & show banner</button>
+      </div>
+      <p class="text-xs text-text2 mt-2">These controls affect analytics, external embeds (YouTube, X, Maps), and ads.</p>
+    </section>
 
-    <h3 class="font-semibold mt-6 mb-2">Categories</h3>
-    <ul class="list-disc pl-6 space-y-2">
-      <li><strong>Analytics</strong> (Plausible): anonymous page analytics to improve content.</li>
-      <li><strong>External embeds</strong> (e.g., comments/YouTube): loaded only when enabled.</li>
-      <li><strong>Ads/Affiliates</strong>: shown only if enabled.</li>
-    </ul>
+    <section class="mt-12">
+      <h2 class="text-2xl font-bold mb-4">What we use</h2>
+      <div class="overflow-auto">
+        <table class="w-full text-sm border border-border/60 rounded-card">
+          <thead class="bg-[#111624] text-left">
+            <tr>
+              <th class="p-3">Category</th>
+              <th class="p-3">Purpose</th>
+              <th class="p-3">Legal basis</th>
+              <th class="p-3">Vendor</th>
+              <th class="p-3">Data</th>
+              <th class="p-3">Loaded when</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border/50">
+            <tr>
+              <td class="p-3 font-semibold">Essential</td>
+              <td class="p-3">Remember your privacy choices; deliver pages</td>
+              <td class="p-3">Art. 6(1)(f) GDPR (legitimate interest)</td>
+              <td class="p-3">Local (no third party)</td>
+              <td class="p-3">LocalStorage key <code>lnf-consent</code>, static assets</td>
+              <td class="p-3">Always</td>
+            </tr>
+            <tr>
+              <td class="p-3 font-semibold">Analytics</td>
+              <td class="p-3">Understand aggregated usage</td>
+              <td class="p-3">Art. 6(1)(a) GDPR (consent)</td>
+              <td class="p-3">Plausible (plausible.io)</td>
+              <td class="p-3">Page events, user agent, referrer (no cookies by default)</td>
+              <td class="p-3">Only if you enable <strong>Analytics</strong></td>
+            </tr>
+            <tr>
+              <td class="p-3 font-semibold">Comments</td>
+              <td class="p-3">Display & write comments</td>
+              <td class="p-3">Art. 6(1)(a) GDPR (consent)</td>
+              <td class="p-3">Giscus (giscus.app / GitHub Discussions)</td>
+              <td class="p-3">Requests to GitHub; may set/read cookies on their domain</td>
+              <td class="p-3">Only if you enable <strong>External embeds</strong></td>
+            </tr>
+            <tr>
+              <td class="p-3 font-semibold">Embeds</td>
+              <td class="p-3">YouTube videos, X (Twitter) posts, Google Maps</td>
+              <td class="p-3">Art. 6(1)(a) GDPR (consent)</td>
+              <td class="p-3">YouTube / Google, X Corp., Google</td>
+              <td class="p-3">Requests to third-party domains (may set cookies there)</td>
+              <td class="p-3">Only if you enable <strong>External embeds</strong></td>
+            </tr>
+            <tr>
+              <td class="p-3 font-semibold">Ads</td>
+              <td class="p-3">Show personalized ads (if configured)</td>
+              <td class="p-3">Art. 6(1)(a) GDPR (consent)</td>
+              <td class="p-3">Ad partner (TBD)</td>
+              <td class="p-3">Ad requests, identifiers; depends on provider</td>
+              <td class="p-3">Only if you enable <strong>Ads</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-text2 mt-3">
+        Detailed vendor policies: <a class="underline" href="https://plausible.io/data-policy" target="_blank" rel="noopener">Plausible</a>,
+        <a class="underline" href="https://giscus.app/" target="_blank" rel="noopener">Giscus</a>,
+        <a class="underline" href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google</a>,
+        <a class="underline" href="https://privacy.x.com/" target="_blank" rel="noopener">X (Twitter)</a>.
+      </p>
+    </section>
 
-    <h2 class="text-xl font-bold mt-8 mb-2">Data Processors</h2>
-    <ul class="list-disc pl-6 space-y-2">
-      <li><strong>Plausible Analytics</strong> – privacy-friendly, no cookies. Only loaded on opt-in.</li>
-      <li><strong>GitHub (Giscus)</strong> – comments widget, loaded on opt-in.</li>
-    </ul>
+    <section class="mt-12">
+      <h2 class="text-2xl font-bold mb-4">Your rights</h2>
+      <ul class="list-disc pl-6 space-y-2">
+        <li>Right of access, rectification, erasure, restriction, portability, and to withdraw consent at any time.</li>
+        <li>To exercise rights, email us at <a class="underline" href="mailto:contact@lnf-guides.com">contact@lnf-guides.com</a>.</li>
+        <li>You can lodge a complaint with your local supervisory authority.</li>
+      </ul>
+    </section>
+  </div>
 
-    <h2 class="text-xl font-bold mt-8 mb-2">Contact</h2>
-    <p>
-      For questions, reach out via <a href="/contact/" class="underline">Contact</a>.
-    </p>
-  </section>
+  <script>
+    document.getElementById('open-privacy')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('consent:open'));
+    });
+    document.getElementById('reset-privacy')?.addEventListener('click', () => {
+      try { localStorage.removeItem('lnf-consent'); } catch {}
+      window.dispatchEvent(new CustomEvent('consent:open'));
+    });
+  </script>
 </BaseLayout>

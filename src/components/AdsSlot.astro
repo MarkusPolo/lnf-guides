@@ -1,26 +1,44 @@
 ---
-interface Props { name: string; height?: number; class?: string; }
-const { name, height = 280, class: cls = '' } = Astro.props as Props;
+interface Props {
+  name?: string;
+  height?: number;
+  class?: string;
+}
+const { name = "slot", height = 180, class: cls = "" } = Astro.props as Props;
+const id = `ad-${name.replace(/[^a-z0-9_-]/gi, "")}`;
 ---
 
-<div class={`ad-slot card border-dashed ${cls}`} style={`min-height:${height}px`} data-name={name} data-consent="ads" aria-label={`Ad slot: ${name}`}>
-  <div class="h-full w-full flex items-center justify-center text-xs text-text2">Ad placeholder: {name}</div>
+<div id={id} class={`rounded-card border border-border/60 bg-[#0f1422] shadow-soft ${cls}`} style={`height:${height}px`}>
+  <div class="text-xs text-text2 text-center pt-2">Ad placeholder: {name}</div>
 </div>
 
 <script>
   // @ts-nocheck
   (function () {
-    const slot = document.currentScript && document.currentScript.previousElementSibling;
-    function renderAd() {
-      const cons = window && window['consent'];
-      const c = cons && cons.get ? cons.get() : null;
-      if (!slot || !c) return;
-      if (c.ads) slot.classList.remove('border-dashed');
-      else slot.classList.add('border-dashed');
+    const id = "{id}";
+
+    function mountAd() {
+      // Hier später echtes Ad-Netz einhängen (z. B. via script tag).
+      // Aktuell nur Visualisierung: „aktiv“-Style
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('ring-1','ring-emerald-500/40');
     }
-    renderAd();
-    window.addEventListener('consent:changed', renderAd);
+
+    function unmountAd() {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('ring-1','ring-emerald-500/40');
+      // evtl. Ad-iframe entfernen etc.
+    }
+
+    function apply() {
+      const allow = !!window.consent?.get?.()?.decisions?.ads;
+      if (allow) mountAd();
+      else unmountAd();
+    }
+
+    window.addEventListener('consent:updated', apply);
+    document.addEventListener('DOMContentLoaded', apply);
   })();
 </script>
-
-

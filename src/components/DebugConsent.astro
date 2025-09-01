@@ -1,0 +1,35 @@
+---
+const show = import.meta.env.DEV;
+---
+
+{show && (
+  <div class="fixed bottom-0 left-0 z-[1150] m-2 rounded-card bg-black/70 text-xs text-text ring-1 ring-black/10 p-3 w-64">
+    <div class="font-semibold mb-1">Consent (dev)</div>
+    <pre id="consent-state" class="text-[11px] whitespace-pre-wrap"></pre>
+    <div class="mt-2 flex gap-2">
+      <button class="btn btn-outline py-1 px-3" id="open-consent">Open</button>
+      <button class="btn btn-outline py-1 px-3" id="reset-consent">Reset</button>
+    </div>
+  </div>
+)}
+
+<script>
+  (function(){
+    var box = document.getElementById('consent-state');
+    function dump() {
+      try {
+        var c = window.consent?.get?.();
+        box && (box.textContent = JSON.stringify(c, null, 2));
+      } catch (e) {}
+    }
+    dump();
+    window.addEventListener('consent:changed', dump);
+    document.getElementById('open-consent')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('consent:open'));
+    });
+    document.getElementById('reset-consent')?.addEventListener('click', () => {
+      try { localStorage.removeItem('lnf-consent'); } catch {}
+      window.dispatchEvent(new CustomEvent('consent:open'));
+    });
+  })();
+</script>

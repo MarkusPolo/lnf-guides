@@ -1,74 +1,215 @@
 ---
-const text = {
-  title: 'Privacy choices',
-  body: 'We use lightweight analytics and optional external embeds (e.g., comments/YouTube). Choose what to enable.',
-  ads: 'Ads/Affiliates',
-  ext: 'External embeds (e.g., comments)',
-  accept: 'Accept all',
-  reject: 'Reject all',
-  save: 'Save choices'
-};
+/**
+ * DSGVO Consent – Banner + Modal
+ * Speichert unter lnf-consent-v1 (policyVersion-gebunden)
+ * Stellt globale API bereit:
+ *   window.consent = {
+ *     KEY, get(), getRecord(), set(partial), setAll(value), decided(), policyVersion
+ *   }
+ * sowie window.consentUI.open() / window.managePrivacy()
+ */
+const POLICY_VERSION = 1;
+const STORAGE_KEY = 'lnf-consent-v1';
 ---
 
-<div id="consent-banner" class="fixed inset-x-0 bottom-0 z-[1100] m-4 hidden">
-  <div class="card p-4 md:p-5 grid gap-3 md:grid-cols-[1fr_auto] items-center">
-    <div>
-      <div class="font-semibold mb-1">{text.title}</div>
-      <p class="text-sm text-text2">{text.body}</p>
-      <div class="mt-3 flex flex-wrap gap-3 text-sm">
-        <label class="inline-flex items-center gap-2">
-          <input id="consent-ads" type="checkbox" class="accent-accent" />
-          {text.ads}
-        </label>
-        <label class="inline-flex items-center gap-2">
-          <input id="consent-external" type="checkbox" class="accent-accent" />
-          {text.ext}
-        </label>
-      </div>
+<!-- Overlay (Customize) -->
+<div id="consent-overlay" class="fixed inset-0 z-[1150] hidden">
+  <!-- backdrop -->
+  <div class="absolute inset-0 bg-bg/95 supports-[backdrop-filter]:bg-bg/60 backdrop-blur" data-consent-backdrop></div>
+
+  <!-- dialog -->
+  <div class="relative mx-auto mt-24 w-[min(680px,calc(100%-2rem))] rounded-card border border-border/60 bg-surface shadow-soft">
+    <div class="flex items-start justify-between p-4 md:p-5 border-b border-border/60">
+      <h2 class="text-lg font-semibold">Customize privacy</h2>
+      <button type="button" class="text-text2 hover:text-text" data-consent-close aria-label="Close">Close</button>
     </div>
-    <div class="flex gap-2 justify-end">
-      <button id="consent-reject" class="btn btn-outline">{text.reject}</button>
-      <button id="consent-accept" class="btn btn-primary">{text.accept}</button>
-      <button id="consent-save" class="btn btn-outline hidden">{text.save}</button>
+
+    <form id="consent-form" class="p-4 md:p-5 space-y-4">
+      <label class="flex gap-3 items-start p-3 rounded-card border border-border/60 bg-[#111624]">
+        <input id="ck-analytics" type="checkbox" class="mt-1" />
+        <span>
+          <div class="font-semibold">Analytics (Plausible)</div>
+          <div class="text-sm text-text2">Anonymous, no cookies. Helps us improve content.</div>
+        </span>
+      </label>
+
+      <label class="flex gap-3 items-start p-3 rounded-card border border-border/60 bg-[#111624]">
+        <input id="ck-external" type="checkbox" class="mt-1" />
+        <span>
+          <div class="font-semibold">External embeds (e.g., comments/YouTube)</div>
+          <div class="text-sm text-text2">Loads third-party content (e.g. YouTube, Giscus) that may process your IP.</div>
+        </span>
+      </label>
+
+      <label class="flex gap-3 items-start p-3 rounded-card border border-border/60 bg-[#111624] opacity-50 cursor-not-allowed">
+        <input id="ck-ads" type="checkbox" class="mt-1" disabled />
+        <span>
+          <div class="font-semibold">Ads</div>
+          <div class="text-sm text-text2">Currently disabled. Future ad networks require explicit opt-in.</div>
+        </span>
+      </label>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button type="button" data-consent-reject class="btn btn-outline">Reject all</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Banner (Prompt) -->
+<div id="consent-banner" class="fixed inset-x-0 bottom-0 z-[1100] bg-bg/80 border-t border-border/60">
+  <div class="mx-auto max-w-7xl px-4 py-3 md:flex items-start justify-between gap-6">
+    <div class="text-sm text-text2 sm:text-left">
+      <strong class="text-text">Privacy preferences</strong><br />
+      We use optional analytics and may load external embeds. Choose what you allow. You can change this anytime.
+      <button type="button" data-open-consent class="ml-2 underline hover:text-text">Manage privacy</button>
+    </div>
+    <div class="mt-3 md:mt-0 flex items-center gap-2">
+      <button type="button" data-consent-reject class="btn btn-outline">Reject all</button>
+      <button type="button" data-open-consent class="btn btn-outline">Customize</button>
+      <button type="button" data-consent-accept class="btn btn-primary">Accept all</button>
     </div>
   </div>
 </div>
 
 <script>
-  // @ts-nocheck
-  (function () {
-    const root = document.getElementById('consent-banner');
-    const elAds = document.getElementById('consent-ads');
-    const elExt = document.getElementById('consent-external');
-    const btnAccept = document.getElementById('consent-accept');
-    const btnReject = document.getElementById('consent-reject');
-    const btnSave = document.getElementById('consent-save');
+  // ----------------- constants (client) -----------------
+  const STORAGE_KEY_JS = 'lnf-consent-v1';
+  const POLICY_V = 1;
 
-    function open() {
-      const cons = window && window['consent'];
-      const c = cons && cons.get ? cons.get() : {};
-      if (elAds) elAds.checked = !!c.ads;
-      if (elExt) elExt.checked = !!c.external;
-      root && root.classList.remove('hidden');
+  // ----------------- storage helpers -----------------
+  const read = () => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY_JS) || 'null'); }
+    catch { return null; }
+  };
+  const write = (obj) => {
+    localStorage.setItem(STORAGE_KEY_JS, JSON.stringify(obj));
+    // fire event with simple shape so Gates can react
+    window.dispatchEvent(new CustomEvent('consent:changed', { detail: obj.decisions }));
+  };
+  const makeRecord = (decisions) => ({
+    version: 1,
+    policyVersion: POLICY_V,
+    ts: Date.now(),
+    decisions: {
+      analytics: !!decisions.analytics,
+      external: !!decisions.external,
+      ads: !!decisions.ads,
     }
-    function close() { root && root.classList.add('hidden'); }
+  });
 
-    const cons = window && window['consent'];
-    if (!(cons && cons.decided && cons.decided())) open();
+  // ----------------- Global API (compat + new) -----------------
+  // get() returns the old/simple shape used across your site
+  window.consent = {
+    KEY: STORAGE_KEY_JS,
+    get() {
+      const r = read();
+      if (r && r.policyVersion === POLICY_V) return { ...r.decisions, ts: r.ts };
+      return { analytics: false, external: false, ads: false, ts: 0 };
+    },
+    getRecord() {
+      const r = read();
+      return r ?? makeRecord({ analytics: false, external: false, ads: false });
+    },
+    set(partial) {
+      const cur = this.getRecord();
+      const next = makeRecord({ ...cur.decisions, ...partial });
+      write(next);
+    },
+    setAll(value) {
+      write(makeRecord({ analytics: !!value, external: !!value, ads: !!value }));
+    },
+    decided() {
+      const r = read();
+      return !!r?.ts && r.policyVersion === POLICY_V;
+    },
+    policyVersion: POLICY_V
+  };
 
-    btnAccept && btnAccept.addEventListener('click', () => { cons && cons.setAll && cons.setAll(true);  close(); });
-    btnReject && btnReject.addEventListener('click', () => { cons && cons.setAll && cons.setAll(false); close(); });
-    btnSave && btnSave.addEventListener('click', () => {
-      cons && cons.set && cons.set({
-        ads: !!(elAds && elAds.checked),
-        external: !!(elExt && elExt.checked),
-      });
-      close();
+  // ----------------- UI logic -----------------
+  const overlay = document.getElementById('consent-overlay');
+  const banner  = document.getElementById('consent-banner');
+  const form    = document.getElementById('consent-form');
+  const ckA = document.getElementById('ck-analytics');
+  const ckE = document.getElementById('ck-external');
+  const ckAds = document.getElementById('ck-ads');
+
+  const openOverlay = (focusField) => {
+    const rec = window.consent.get();
+    ckA.checked = !!rec.analytics;
+    ckE.checked = !!rec.external;
+    ckAds.checked = !!rec.ads; // currently disabled UI
+    overlay.classList.remove('hidden');
+    document.documentElement.classList.add('overflow-hidden');
+    if (focusField === 'external') ckE?.focus();
+    window.dispatchEvent(new CustomEvent('consent:open'));
+  };
+  const closeOverlay = () => {
+    overlay.classList.add('hidden');
+    document.documentElement.classList.remove('overflow-hidden');
+    window.dispatchEvent(new CustomEvent('consent:close'));
+  };
+
+  // Exponieren (für beliebige Buttons/Links)
+  window.consentUI = { open: (focus) => openOverlay(focus), close: () => closeOverlay() };
+  window.managePrivacy = () => openOverlay();
+
+  // Delegation: funktioniert für
+  //  - [data-open-consent]
+  //  - [data-manage-privacy]
+  //  - a[href*="privacy"], a[href="#privacy"], a[href*="manage-privacy"]
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    const openTrigger =
+      t.closest?.('[data-open-consent]') ||
+      t.closest?.('[data-manage-privacy]') ||
+      t.closest?.('a[href*="privacy"]') ||
+      t.closest?.('a[href="#privacy"]') ||
+      t.closest?.('a[href*="manage-privacy"]');
+
+    if (openTrigger) {
+      e.preventDefault();
+      openOverlay();
+    }
+
+    if (t.closest?.('[data-consent-close]') || t.closest?.('[data-consent-backdrop]')) {
+      e.preventDefault();
+      closeOverlay();
+    }
+  });
+
+  // Keyboard ESC schließt
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeOverlay();
+  });
+
+  // Banner nur zeigen, wenn noch nicht entschieden (oder Policy bump)
+  if (window.consent.decided()) banner?.remove();
+
+  // Buttons
+  const acceptAll = () => {
+    window.consent.setAll(true);
+    banner?.remove();
+    closeOverlay();
+  };
+  const rejectAll = () => {
+    window.consent.setAll(false);
+    banner?.remove();
+    closeOverlay();
+  };
+
+  document.querySelectorAll('[data-consent-accept]').forEach(b => b.addEventListener('click', acceptAll));
+  document.querySelectorAll('[data-consent-reject]').forEach(b => b.addEventListener('click', rejectAll));
+
+  form?.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    window.consent.set({
+      analytics: ckA.checked,
+      external: ckE.checked,
+      ads: ckAds.checked
     });
-
-    elAds && elAds.addEventListener('change', () => btnSave && btnSave.classList.remove('hidden'));
-    elExt && elExt.addEventListener('change', () => btnSave && btnSave.classList.remove('hidden'));
-  })();
+    banner?.remove();
+    closeOverlay();
+  });
 </script>
-
-
