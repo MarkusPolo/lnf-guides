@@ -1,0 +1,69 @@
+---
+import { getCollection } from 'astro:content';
+
+// Tags sammeln (Top 15)
+const guides = await getCollection('guides');
+const counts = new Map<string, number>();
+for (const g of guides) {
+  for (const t of (g.data.tags || [])) {
+    const key = String(t);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+}
+const topTags = Array.from(counts.entries())
+  .sort((a,b)=>b[1]-a[1])
+  .slice(0,15)
+  .map(([tag,count]) => ({ tag, count }));
+---
+
+<footer class="mt-16 border-t border-border/60 bg-surface">
+  <div class="mx-auto max-w-7xl px-4 py-10 grid gap-8 md:grid-cols-4">
+    <div>
+      <div class="font-semibold mb-2">Site</div>
+      <ul class="space-y-1 text-text2">
+        <li><a href="/" class="hover:text-text">Home</a></li>
+        <li><a href="/guides/" class="hover:text-text">Guides</a></li>
+        <li><a href="/news/" class="hover:text-text">News</a></li>
+        <li><a href="/updates/" class="hover:text-text">Updates</a></li>
+        <li><a href="/about/" class="hover:text-text">About</a></li>
+        <li><a href="/contact/" class="hover:text-text">Contact</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <div class="font-semibold mb-2">Categories</div>
+      <ul class="space-y-1 text-text2">
+        <li><a href="/guides/beginners/" class="hover:text-text">Beginners</a></li>
+        <li><a href="/guides/dragons/" class="hover:text-text">Dragons</a></li>
+        <li><a href="/guides/combat/" class="hover:text-text">Combat</a></li>
+        <li><a href="/guides/crafting/" class="hover:text-text">Crafting</a></li>
+        <li><a href="/guides/exploration/" class="hover:text-text">Exploration</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <div class="font-semibold mb-2">Legal</div>
+      <ul class="space-y-1 text-text2">
+        <li><a href="/legal/" class="hover:text-text">Legal</a></li>
+        <li><a href="/privacy/" class="hover:text-text">Privacy</a></li>
+        <li><a href="/impressum/" class="hover:text-text">Imprint</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <div class="font-semibold mb-2">Tags</div>
+      <div class="flex flex-wrap gap-2">
+        {topTags.map(({ tag }) => (
+          <a href={`/guides/?tags=${encodeURIComponent(tag)}`}
+             class="px-3 py-1 rounded-full border border-border/60 text-sm hover:bg-bg/60">
+            {tag}
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <div class="mx-auto max-w-7xl px-4 pb-8 text-xs text-text2">
+    <p>Unofficial fan site. Not affiliated with Hello Games.</p>
+  </div>
+</footer>

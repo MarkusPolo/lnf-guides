@@ -1,0 +1,68 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import UpdateDiff from '../components/UpdateDiff.astro';
+
+const { frontmatter } = Astro.props as {
+  frontmatter: {
+    title: string;
+    description: string;
+    pubDate: string | Date;
+    updatedDate?: string | Date;
+    version: string;
+    changes?: Record<string, string[]>;
+    cover?: string;
+  };
+};
+
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const pubISO = new Date(frontmatter.pubDate).toISOString();
+const updISO = frontmatter.updatedDate ? new Date(frontmatter.updatedDate).toISOString() : undefined;
+
+const articleLD = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: frontmatter.title,
+  description: frontmatter.description,
+  datePublished: pubISO,
+  ...(updISO ? { dateModified: updISO } : {}),
+  mainEntityOfPage: String(canonical)
+};
+
+const breadcrumbLD = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type':'ListItem', position:1, name:'Updates', item:new URL('/updates/', Astro.site).toString() },
+    { '@type':'ListItem', position:2, name:frontmatter.title, item:String(canonical) }
+  ]
+};
+---
+
+<BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} type="article">
+  <section class="mx-auto max-w-3xl px-4 mt-8">
+    <Breadcrumbs items={[{name:'Updates', href:'/updates/'},{name:frontmatter.title}]} />
+
+    <header class="mb-4">
+      <h1 class="text-3xl font-extrabold">{frontmatter.title}</h1>
+      <p class="text-sm text-text2">
+        <span class="inline-flex items-center gap-2">
+          <span class="rounded-full border border-border/60 px-3 py-1 text-xs">v{frontmatter.version}</span>
+          <time datetime={pubISO}>{new Date(frontmatter.pubDate).toLocaleDateString('en-US')}</time>
+          {frontmatter.updatedDate && <span> • Updated <time datetime={updISO}>{new Date(frontmatter.updatedDate).toLocaleDateString('en-US')}</time></span>}
+        </span>
+      </p>
+    </header>
+
+    {frontmatter.description && <p class="text-text2 mb-6">{frontmatter.description}</p>}
+
+    {frontmatter.changes && <UpdateDiff changes={frontmatter.changes} />}
+
+    <article class="prose prose-invert max-w-none mt-8">
+      <slot />
+    </article>
+  </section>
+
+  <script type="application/ld+json">{JSON.stringify(articleLD)}</script>
+  <script type="application/ld+json">{JSON.stringify(breadcrumbLD)}</script>
+</BaseLayout>

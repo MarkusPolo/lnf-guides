@@ -1,108 +1,124 @@
 ---
 import "../styles/global.css";
 import ConsentBanner from "../components/ConsentBanner.astro";
-const { /* ... */ } = Astro.props;
 
-const { title, description, canonical, ogImage, type = 'website', category } = Astro.props as any;
+// Props
+interface Props {
+  title: string;
+  description?: string;
+  canonical?: URL | string;
+  ogImage?: string;
+  type?: 'website' | 'article';
+  category?: string;      // für OG-Fallbacks (z.B. 'dragons', 'beginners')
+  noindex?: boolean;
+}
+const {
+  title,
+  description = "Crisp guides, spoiler-safe tips, and meta updates for Light No Fire.",
+  canonical,
+  ogImage,
+  type = "website",
+  category,
+  noindex = false,
+} = Astro.props as Props;
 
-const site = Astro.site?.origin ?? 'https://lnf-guides.com';
-const url = canonical ?? new URL(Astro.url.pathname, site);
-const siteUrl = String(Astro.site);
+// Site / Canonical
+const SITE = String(Astro.site ?? "https://lnf-guides.com");
+const canonicalURL =
+  typeof canonical === "string"
+    ? canonical
+    : canonical instanceof URL
+      ? canonical.toString()
+      : new URL(Astro.url.pathname, Astro.site).toString();
 
-const OG = { title, description, image: ogImage };
-const ogFallbackByCategory: Record<string,string> = {
-  dragons: '/images/og/dragons.png',
-  beginners: '/images/og/beginners.png',
+// OG-Fallbacks
+const ogFallbackByCategory: Record<string, string> = {
+  dragons: "/images/og/dragons.png",
+  beginners: "/images/og/beginners.png",
 };
-const finalOg = ogImage || ogFallbackByCategory[category] || '/images/og/default.png';
-const PLAUSIBLE_DOMAIN = 'lnf-guides.example';
+const finalOg = ogImage || (category ? ogFallbackByCategory[category] : undefined) || "/images/og/default.png";
+const siteName = "LNF Guides";
+const twitterHandle = "@lnfguides"; // optional
 ---
 
 <html lang="en" class="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <link rel="canonical" href={String(url)} />
 
     <title>{title}</title>
-      <meta name="description" content={description} />
-      <link rel="canonical" href={String(canonical)} />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+    {noindex ? <meta name="robots" content="noindex,nofollow" /> : <meta name="robots" content="index,follow,max-image-preview:large" />}
 
-    <!-- OG / Twitter -->
+    <!-- Open Graph -->
     <meta property="og:type" content={type} />
+    <meta property="og:site_name" content={siteName} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:url" content={String(canonical)} />
+    <meta property="og:url" content={canonicalURL} />
     <meta property="og:image" content={finalOg} />
-    <meta property="og:site_name" content="LNF Guides" />
+    <meta property="og:image:alt" content={`${title} · ${siteName}`} />
 
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={finalOg} />
+    <meta name="twitter:site" content={twitterHandle} />
 
+    <!-- Icons -->
     <link rel="icon" href="/images/logo.svg" type="image/svg+xml" />
 
-    <!-- JSON-LD: WebSite + SearchAction + Organization -->
+    <!-- JSON-LD: Organization -->
     <script type="application/ld+json">
-      {
-        "@context":"https://schema.org",
-        "@type":"WebSite",
-        "url":"{String(site)}",
-        "name":"LNF Guides",
-        "potentialAction":{
-          "@type":"SearchAction",
-          "target":"{String(site)}/search?q={query}",
-          "query-input":"required name=query"
-        }
-      }
-    </script>
-    <script type="application/ld+json">
-      {
+      {JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Organization",
-        "name": "LNF Guides",
-        "url": "{String(site)}",
-        "logo": "{String(site)}/images/logo.svg",
-        "sameAs": ["https://github.com/lnf-guides"]
-      }
+        name: siteName,
+        url: SITE,
+        logo: `${SITE}/images/logo.svg`,
+        sameAs: ["https://github.com/MarkusPolo/lnf-guides"],
+      })}
     </script>
 
-    <!-- Plausible -->
-    <script defer data-domain={PLAUSIBLE_DOMAIN} src="https://plausible.io/js/script.js"></script>
-    <script type="application/ld+json">{JSON.stringify({
-      "@context":"https://schema.org",
-      "@type":"Organization",
-      "name":"LNF Guides",
-      "url": siteUrl,
-      "logo": "/images/logo.svg"
-    })}</script>
-
-    <script type="application/ld+json">{JSON.stringify({
-      "@context":"https://schema.org",
-      "@type":"WebSite",
-      "url": siteUrl,
-      "name":"LNF Guides",
-      "potentialAction":{
-        "@type":"SearchAction",
-        "target": `${siteUrl}?q={search_term_string}`,
-        "query-input":"required name=search_term_string"
-      }
-    })}</script>
+    <!-- JSON-LD: WebSite + SearchAction -->
+    <script type="application/ld+json">
+      {JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        url: SITE,
+        name: siteName,
+        potentialAction: {
+          "@type": "SearchAction",
+          target: `${SITE}/guides/?q={search_term_string}`,
+          "query-input": "required name=search_term_string",
+        },
+      })}
+    </script>
   </head>
+
   <body class="font-sans">
     <a href="#content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:bg-surface focus:px-3 focus:py-2 focus:rounded">Skip to content</a>
-    <header class="sticky top-0 z-[1000] isolate border-b border-border/60 bg-bg backdrop-blur">
+
+    <!-- Header (inline, wie bei dir zuvor) -->
+    <header class="sticky top-0 z-[1000] isolate border-b border-border/60 bg-bg/95 backdrop-blur">
       <div class="mx-auto max-w-7xl px-4 py-3 flex items-center gap-4">
         <a href="/" class="flex items-center gap-2">
           <img src="/images/logo.svg" alt="LNF Guides" class="h-7 w-7" />
           <span class="text-lg font-extrabold tracking-tight">LNF Guides</span>
         </a>
+
         <div class="flex-1 max-w-xl mx-auto hidden md:block">
-          <button id="open-search" class="w-full text-left border border-border/60 rounded-full px-4 py-2 text-text2 hover:bg-surface" aria-label="Open search (Cmd/Ctrl+K)">
+          <button
+            id="open-search"
+            class="w-full text-left border border-border/60 rounded-full px-4 py-2 text-text2 hover:bg-surface"
+            aria-label="Open search (Cmd/Ctrl+K)"
+          >
             Press ⌘/Ctrl K to search…
           </button>
         </div>
+
         <nav class="flex items-center gap-4 text-sm">
           <a href="/guides/" class="hover:underline">Guides</a>
           <a href="/news/" class="hover:underline">News</a>
@@ -114,9 +130,14 @@ const PLAUSIBLE_DOMAIN = 'lnf-guides.example';
       </div>
     </header>
 
+    <!-- Optionaler Search-Slot -->
     <slot name="search" />
-    <main id="content"><slot /></main>
 
+    <main id="content">
+      <slot />
+    </main>
+
+    <!-- Footer (inline) -->
     <footer class="mt-16 border-t border-border/60">
       <div class="mx-auto max-w-7xl px-4 py-12 grid gap-8 md:grid-cols-4 text-sm">
         <section>
@@ -157,12 +178,14 @@ const PLAUSIBLE_DOMAIN = 'lnf-guides.example';
       </div>
     </footer>
 
+    <!-- Search-Button: öffnet Overlay via KeyboardEvent -->
     <script>
       document.getElementById('open-search')?.addEventListener('click', () =>
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))
       );
     </script>
-        <!-- Consent core (global) -->
+
+    <!-- Consent core (global) – unverändert beibehalten -->
     <script>
       // @ts-nocheck
       (function () {
@@ -180,9 +203,37 @@ const PLAUSIBLE_DOMAIN = 'lnf-guides.example';
         const setAll = (value) => write({ ads: value, external: value, ts: Date.now() });
         const decided = () => !!read().ts;
 
+        // global
         window.consent = { get: read, set, setAll, decided, KEY };
       })();
     </script>
+
+    <!-- Plausible: nur laden, falls consent.external === true -->
+    <script>
+      // @ts-nocheck
+      (function () {
+        function loadPlausible() {
+          try {
+            if (!window.consent?.get) return;
+            const { external } = window.consent.get();
+            if (!external) return;
+            if (document.getElementById('plausible-src')) return;
+            const s = document.createElement('script');
+            s.id = 'plausible-src';
+            s.defer = true;
+            // Domain dynamisch aus Host ableiten, oder fix setzen:
+            s.setAttribute('data-domain', location.hostname);
+            s.src = 'https://plausible.io/js/script.js';
+            document.head.appendChild(s);
+          } catch {}
+        }
+        // sofort versuchen
+        loadPlausible();
+        // bei Änderungen vom Banner erneut prüfen
+        window.addEventListener('consent:changed', loadPlausible);
+      })();
+    </script>
+
     <ConsentBanner />
   </body>
 </html>

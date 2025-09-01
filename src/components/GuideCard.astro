@@ -5,18 +5,67 @@ interface Props {
   description?: string;
   tag?: string;
   readingTime?: number;
-  cover?: string;
+  cover?: any; // String oder { src, ... }
 }
 const { href, title, description, tag, readingTime, cover } = Astro.props as Props;
+
+function resolveSrc(c: any): string | undefined {
+  if (!c) return undefined;
+  if (typeof c === 'string') return c;
+  if (typeof c.src === 'string') return c.src;
+  if (typeof c.url === 'string') return c.url;
+  if (typeof c.image?.src === 'string') return c.image.src;
+  if (typeof c.default?.src === 'string') return c.default.src;
+  return undefined;
+}
+const imgSrc = resolveSrc(cover);
 ---
-<a href={href} class="card overflow-hidden block hover:translate-y-[-2px] transition will-change-transform">
-  {cover && <img src={cover} alt={title} loading="lazy" decoding="async" class="w-full aspect-[16/9] object-cover" />}
-  <div class="p-4">
-    <div class="flex items-center gap-2 mb-2">
-      {tag && <span class="text-xs px-2 py-0.5 rounded-full bg-accent2/20 text-accent2">{tag}</span>}
-      {readingTime && <span class="text-xs text-text2">{readingTime} min read</span>}
+
+<a
+  href={href}
+  class="group block h-full rounded-card overflow-hidden bg-surface border border-border/60 shadow-soft focus:outline-none focus:ring-2 focus:ring-[#7C9CFF]/60 flex flex-col"
+>
+  <!-- Gleiches Media-Ratio überall -->
+  <div class="relative w-full aspect-[16/9] overflow-hidden">
+    {imgSrc ? (
+      <img
+        src={imgSrc}
+        alt={title}
+        loading="lazy"
+        decoding="async"
+        class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+      />
+    ) : (
+      <div class="w-full h-full bg-[#111624]"></div>
+    )}
+    <div class="pointer-events-none absolute inset-0 ring-1 ring-inset ring-black/10"></div>
+  </div>
+
+  <!-- Body füllt restliche Höhe -->
+  <div class="p-4 flex flex-col gap-2 flex-1">
+    <div class="flex items-center gap-2 text-xs text-text2">
+      {tag && (
+        <span class="inline-flex items-center rounded-full bg-[#68D391]/15 border border-[#68D391]/50 px-2 py-0.5 text-[11px] text-text">
+          {tag}
+        </span>
+      )}
+      {typeof readingTime === 'number' && readingTime > 0 && (
+        <span class="text-text2">{readingTime} min read</span>
+      )}
     </div>
-    <h3 class="text-lg font-semibold mb-1 line-clamp-2">{title}</h3>
-    {description && <p class="text-sm text-text2 line-clamp-2">{description}</p>}
+
+    <!-- Titel & Description fix auf 2 Zeilen -->
+    <h3 class="text-lg font-semibold leading-snug lc-2">
+      {title}
+    </h3>
+
+    {description && (
+      <p class="text-sm text-text2 lc-2">
+        {description}
+      </p>
+    )}
+
+    <!-- Spacer hält Footer-Bereich bündig -->
+    <div class="flex-1"></div>
   </div>
 </a>

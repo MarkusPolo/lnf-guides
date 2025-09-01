@@ -5,7 +5,7 @@ import NewsLayout from '../../../../layouts/NewsLayout.astro';
 export async function getStaticPaths() {
   const entries = await getCollection('news');
   return entries.map((e) => {
-    const parts = e.slug.split('/'); // z.B. ["2025","08","trailer-analysis"]
+    const parts = e.slug.split('/'); // ["YYYY","MM","slug"]
     return {
       params: {
         year: parts[0],

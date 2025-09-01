@@ -1,25 +1,279 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import SearchOverlay from '../../components/SearchOverlay.astro';
 import GuideCard from '../../components/GuideCard.astro';
 import { getCollection } from 'astro:content';
-import SearchOverlay from '../../components/SearchOverlay.astro';
 
-const guides = (await getCollection('guides')).sort((a, b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate));
-const categories = Array.from(new Set(guides.map(g => g.data.category)));
+type GuideItem = {
+  slug: string;
+  title: string;
+  description: string;
+  category: string;
+  tags: string[];
+  pubDate: Date | string;
+  readingTime?: number;
+  cover?: any; // String oder ImageMetadata
+};
+
+const raw = await getCollection('guides');
+const items: GuideItem[] = raw.map((e) => ({
+  slug: e.slug,
+  title: String(e.data.title),
+  description: String(e.data.description),
+  category: String(e.data.category ?? 'misc'),
+  tags: (e.data.tags || []).map((t: any) => String(t)),
+  pubDate: e.data.pubDate as Date,
+  readingTime: e.data.readingTime as number | undefined,
+  cover: e.data.cover, // unverändert durchreichen
+}));
+
+// Tags nach Häufigkeit sortieren
+const tagCounts = new Map<string, number>();
+for (const it of items) for (const t of it.tags) tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
+const tags = Array.from(tagCounts.entries()).sort((a,b)=>b[1]-a[1]).map(([t])=>t);
+
+const canonical = new URL('/guides/', Astro.site);
 ---
 
-<BaseLayout title="Guides" description="All Light No Fire guides by category and tags.">
+<BaseLayout title="All Guides" description="Refine with Tags. Combine tags via Any/All." canonical={canonical}>
   <Fragment slot="search"><SearchOverlay /></Fragment>
+
   <section class="mx-auto max-w-7xl px-4 mt-8">
-    <h1 class="text-3xl font-extrabold">Guides</h1>
-    <div class="mt-4 flex flex-wrap gap-2">
-      {categories.map(c => <a href={`/guides/${c}/`} class="px-3 py-1 rounded-full border border-border/60 hover:bg-surface">{c}</a>)}
+    <header class="mb-6">
+      <h1 class="text-3xl font-extrabold">All Guides</h1>
+      <p class="text-text2">Refine with <strong>Tags</strong>. Combine tags via Any/All.</p>
+    </header>
+
+    <div class="card p-4 border border-border/60 mb-4">
+      <div class="flex flex-wrap gap-2" id="f-tags" aria-label="Tags" role="group">
+        {tags.map((t) => (
+          <button type="button"
+                  class="px-3 py-1 rounded-full border border-border/60 text-sm hover:bg-bg/60 transition"
+                  data-tag={t} data-active="false" aria-pressed="false">
+            {t}
+          </button>
+        ))}
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center gap-4">
+        <div class="flex items-center gap-2" role="group" aria-label="Match mode">
+          <span class="text-xs text-text2">Match</span>
+          <button id="m-any"  type="button" class="px-2 py-1 rounded-card border border-border/60 text-xs" data-mode="any"  aria-pressed="true">Any</button>
+          <button id="m-all"  type="button" class="px-2 py-1 rounded-card border border-border/60 text-xs" data-mode="all"  aria-pressed="false">All</button>
+        </div>
+
+        <div class="flex items-center gap-3 ml-auto">
+          <label for="f-sort" class="text-xs text-text2">Sort</label>
+          <select id="f-sort" class="bg-surface border border-border/60 rounded-card px-3 py-2">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="reading">Reading time</option>
+            <option value="title">Title (A–Z)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="active-filters" class="flex flex-wrap gap-2 mt-4 hidden"></div>
     </div>
 
-    <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {guides.map(g => (
-        <GuideCard href={`/guides/${g.slug}/`} title={g.data.title} description={g.data.description} tag={g.data.category} readingTime={g.data.readingTime} cover={g.data.cover} />
+    <div id="guides-grid" class="grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {items.map((g) => (
+        <div
+          class="guide-card h-full"
+          data-tags={g.tags.join(',')}
+          data-date={new Date(g.pubDate).toISOString()}
+          data-reading={g.readingTime ?? 0}
+          data-title={g.title.toLowerCase()}
+        >
+          <GuideCard
+            href={`/guides/${g.slug}/`}
+            title={g.title}
+            description={g.description}
+            tag={(g.tags && g.tags.length ? g.tags[0] : g.category)}
+            readingTime={g.readingTime}
+            cover={g.cover}
+          />
+        </div>
       ))}
     </div>
+
+    <div class="mt-8 flex items-center justify-center gap-2" id="pager" aria-label="Pagination"></div>
   </section>
+
+  <style>
+    #f-tags [data-tag][data-active="true"]{
+      background: rgba(104,211,145,.15);
+      border-color: #68D391;
+      color: var(--color-text, #E6ECFF);
+    }
+    [data-mode][aria-pressed="true"]{ background: rgba(124,156,255,.15); border-color:#7C9CFF; }
+  </style>
+
+  <script is:inline>
+    // @ts-nocheck
+    (function () {
+      const grid   = document.getElementById('guides-grid');
+      const tagsEl = document.getElementById('f-tags');
+      const chips  = document.getElementById('active-filters');
+      const selSort= document.getElementById('f-sort');
+      const mAny   = document.getElementById('m-any');
+      const mAll   = document.getElementById('m-all');
+      const pager  = document.getElementById('pager');
+      if (!grid || !tagsEl || !chips || !selSort || !mAny || !mAll || !pager) return;
+
+      const CARDS = Array.from(grid.querySelectorAll('.guide-card'));
+      const PAGE_SIZE = 9;
+
+      function selectedTags() {
+        return Array.from(tagsEl.querySelectorAll('[data-tag][data-active="true"]')).map(b => b.getAttribute('data-tag'));
+      }
+      function matchMode() {
+        return mAll.getAttribute('aria-pressed') === 'true' ? 'all' : 'any';
+      }
+      function setMode(mode) {
+        const any = mode === 'any';
+        mAny.setAttribute('aria-pressed', any ? 'true' : 'false');
+        mAll.setAttribute('aria-pressed', any ? 'false' : 'true');
+      }
+
+      function applyFilters() {
+        const mode = matchMode();
+        const sel = new Set(selectedTags());
+        CARDS.forEach(el => {
+          const etags = (el.getAttribute('data-tags') || '').split(',').filter(Boolean);
+          const ok = sel.size === 0
+            ? true
+            : (mode === 'any'
+                ? etags.some(t => sel.has(t))
+                : Array.from(sel).every(t => etags.includes(t)));
+          el.toggleAttribute('data-show', ok);
+        });
+        applySort();
+        renderPage(1);
+        renderChips();
+        syncURL();
+      }
+
+      function applySort() {
+        const v = selSort.value;
+        const visible = CARDS.filter((el) => el.hasAttribute('data-show'));
+        const by = {
+          newest: (a, b) => (b.getAttribute('data-date') || '').localeCompare(a.getAttribute('data-date') || ''),
+          oldest: (a, b) => (a.getAttribute('data-date') || '').localeCompare(b.getAttribute('data-date') || ''),
+          reading: (a, b) => (+b.getAttribute('data-reading') || 0) - (+a.getAttribute('data-reading') || 0),
+          title: (a, b) => (a.getAttribute('data-title') || '').localeCompare(b.getAttribute('data-title') || ''),
+        }[v] || ((a, b) => 0);
+
+        visible.sort(by);
+        const frag = document.createDocumentFragment();
+        const hidden = CARDS.filter((el) => !el.hasAttribute('data-show'));
+        visible.forEach((el) => frag.appendChild(el));
+        hidden.forEach((el) => frag.appendChild(el));
+        grid.innerHTML = '';
+        grid.appendChild(frag);
+      }
+
+      function renderPage(page) {
+        const visible = Array.from(grid.querySelectorAll('.guide-card[data-show]'));
+        const total = visible.length;
+        const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        page = Math.min(Math.max(1, page), pages);
+
+        visible.forEach((el, i) => {
+          el.style.display = (i >= (page - 1) * PAGE_SIZE && i < page * PAGE_SIZE) ? '' : 'none';
+        });
+        Array.from(grid.querySelectorAll('.guide-card:not([data-show])')).forEach((el) => (el.style.display = 'none'));
+
+        pager.innerHTML = '';
+        if (pages <= 1) return;
+        const mk = (label, p, active=false, disabled=false) => {
+          const btn = document.createElement('button');
+          btn.className = `px-3 py-1 rounded-card border ${active ? 'bg-surface' : 'border-border/60 hover:bg-bg/60'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
+          btn.textContent = label;
+          if (!disabled) btn.addEventListener('click', () => renderPage(p));
+          return btn;
+        };
+        pager.appendChild(mk('«', 1, false, page===1));
+        pager.appendChild(mk('‹', page-1, false, page===1));
+        for (let i=1;i<=pages;i++){ pager.appendChild(mk(String(i), i, i===page)); }
+        pager.appendChild(mk('›', page+1, false, page===pages));
+        pager.appendChild(mk('»', pages, false, page===pages));
+
+        const url = new URL(location.href);
+        url.searchParams.set('page', String(page));
+        history.replaceState({}, '', url.toString());
+      }
+
+      function renderChips() {
+        const tags = selectedTags();
+        chips.innerHTML = '';
+        chips.classList.toggle('hidden', tags.length === 0);
+        for (const t of tags) {
+          const c = document.createElement('button');
+          c.className = 'px-2 py-0.5 text-xs rounded-full border border-border/60 hover:bg-bg/60';
+          c.textContent = `Tag: ${t} ×`;
+          c.addEventListener('click', () => {
+            const btn = tagsEl.querySelector(`[data-tag="${CSS.escape(t)}"]`);
+            if (btn) { btn.setAttribute('data-active','false'); btn.setAttribute('aria-pressed','false'); }
+            applyFilters();
+          });
+          chips.appendChild(c);
+        }
+        const clear = document.createElement('button');
+        clear.className = 'ml-2 px-3 py-1 rounded-card border border-border/60 hover:bg-bg/60 text-xs';
+        clear.textContent = 'Clear all';
+        clear.addEventListener('click', () => {
+          tagsEl.querySelectorAll('[data-tag]').forEach(b => { b.setAttribute('data-active','false'); b.setAttribute('aria-pressed','false'); });
+          applyFilters();
+        });
+        chips.appendChild(clear);
+      }
+
+      function syncURL() {
+        const url = new URL(location.href);
+        const tags = selectedTags();
+        const sort = selSort.value;
+        const mode = matchMode();
+
+        if (tags.length) url.searchParams.set('tags', tags.join(',')); else url.searchParams.delete('tags');
+        if (sort && sort !== 'newest') url.searchParams.set('sort', sort); else url.searchParams.delete('sort');
+        if (mode !== 'any') url.searchParams.set('mode', mode); else url.searchParams.delete('mode');
+
+        history.replaceState({}, '', url.toString());
+      }
+
+      (function restore(){
+        const url  = new URL(location.href);
+        const sort = url.searchParams.get('sort') || 'newest';
+        const tags = (url.searchParams.get('tags') || '').split(',').filter(Boolean);
+        const mode = url.searchParams.get('mode') || 'any';
+        const page = parseInt(url.searchParams.get('page') || '1', 10);
+
+        setMode(mode);
+        selSort.value = sort;
+
+        CARDS.forEach((el)=>el.setAttribute('data-show',''));
+
+        tags.forEach(t => {
+          const btn = tagsEl.querySelector(`[data-tag="${CSS.escape(t)}"]`);
+          if (btn) { btn.setAttribute('data-active','true'); btn.setAttribute('aria-pressed','true'); }
+        });
+
+        applyFilters();
+        renderPage(page);
+      })();
+
+      tagsEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-tag]');
+        if (!btn) return;
+        const on = btn.getAttribute('data-active') === 'true';
+        btn.setAttribute('data-active', on ? 'false' : 'true');
+        btn.setAttribute('aria-pressed', on ? 'false' : 'true');
+        applyFilters();
+      });
+      selSort.addEventListener('change', () => { applySort(); renderPage(1); syncURL(); });
+      mAny.addEventListener('click', () => { setMode('any'); applyFilters(); });
+      mAll.addEventListener('click', () => { setMode('all'); applyFilters(); });
+    })();
+  </script>
 </BaseLayout>
