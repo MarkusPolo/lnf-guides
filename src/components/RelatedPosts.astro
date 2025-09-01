@@ -1,0 +1,43 @@
+---
+import { getCollection } from 'astro:content';
+import GuideCard from './GuideCard.astro';
+
+interface Props {
+  currentSlug: string;           // "dragons/best-starter-dragons"
+  category: string;              // z.B. "dragons"
+  tags?: string[];
+  limit?: number;
+}
+const { currentSlug, category, tags = [], limit = 3 } = Astro.props as Props;
+
+const all = await getCollection('guides');
+function score(e: any) {
+  const t = new Set((e.data.tags || []).map((x: string) => x.toLowerCase()));
+  const overlap = tags.filter((x) => t.has(String(x).toLowerCase())).length;
+  const recency = new Date(e.data.pubDate).getTime() / 1e11; // schwacher Bonus
+  return overlap * 10 + recency;
+}
+
+const candidates = all
+  .filter((e) => e.data.category === category && e.slug !== currentSlug)
+  .sort((a, b) => score(b) - score(a))
+  .slice(0, limit);
+---
+
+{candidates.length > 0 && (
+  <section class="mt-10">
+    <h2 class="text-xl font-extrabold mb-4">Related guides</h2>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {candidates.map((e) => (
+        <GuideCard
+          href={`/guides/${e.slug}/`}
+          title={e.data.title}
+          description={e.data.description}
+          tag={e.data.category}
+          readingTime={e.data.readingTime}
+          cover={e.data.cover}
+        />
+      ))}
+    </div>
+  </section>
+)}

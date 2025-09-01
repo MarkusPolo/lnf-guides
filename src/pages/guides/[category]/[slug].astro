@@ -5,25 +5,21 @@ import GuideLayout from '../../../layouts/GuideLayout.astro';
 export async function getStaticPaths() {
   const entries = await getCollection('guides');
   return entries.map((e) => {
-    const parts = e.slug.split('/'); // z.B. ["beginners","getting-started"]
-    return {
-      params: {
-        category: parts[0],
-        slug: parts.slice(1).join('/'),
-      },
-    };
+    const [category, ...rest] = e.slug.split('/');
+    return { params: { category, slug: rest.join('/') } };
   });
 }
 
 const { category, slug } = Astro.params;
-const entry = (await getCollection('guides')).find((e) => e.slug === `${category}/${slug}`);
+const fullSlug = `${category}/${slug}`;
+
+const entry = (await getCollection('guides')).find((e) => e.slug === fullSlug);
 if (!entry) return Astro.redirect('/404');
 
 const { Content, headings } = await entry.render();
 const fm = entry.data;
-const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
 
-<GuideLayout frontmatter={fm} headings={headings} canonical={canonical}>
+<GuideLayout frontmatter={fm} headings={headings} currentSlug={fullSlug}>
   <Content />
 </GuideLayout>

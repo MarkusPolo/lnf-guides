@@ -5,15 +5,28 @@ import TOC from '../components/TOC.astro';
 import SearchOverlay from '../components/SearchOverlay.astro';
 import AdsSlot from '../components/AdsSlot.astro';
 import CommentsGiscus from '../components/CommentsGiscus.astro';
+import RelatedPosts from '../components/RelatedPosts.astro';
+import PrevNext from '../components/PrevNext.astro';
 
-const { frontmatter, headings } = Astro.props as {
+const { frontmatter, headings, currentSlug } = Astro.props as {
   frontmatter: any;
   headings: { depth: number; slug: string; text: string }[];
+  currentSlug: string; // <= kommt jetzt von der Seite
 };
 
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const pubISO = new Date(frontmatter.pubDate).toISOString();
 const updISO = frontmatter.updatedDate ? new Date(frontmatter.updatedDate).toISOString() : undefined;
+
+const breadcrumbLD = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type':'ListItem', position:1, name:'Guides', item:new URL('/guides/', Astro.site).toString() },
+    { '@type':'ListItem', position:2, name:frontmatter.category, item:new URL(`/guides/${frontmatter.category}/`, Astro.site).toString() },
+    { '@type':'ListItem', position:3, name:frontmatter.title, item:new URL(Astro.url.pathname, Astro.site).toString() }
+  ]
+};
 
 const articleLD = {
   '@context': 'https://schema.org',
@@ -38,7 +51,8 @@ if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length)
 }
 ---
 
-<BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} ogImage={frontmatter.cover}>
+
+<BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} ogImage={frontmatter.cover} category={frontmatter.category}>
   <Fragment slot="search"><SearchOverlay /></Fragment>
   <div class="mx-auto max-w-7xl px-4 mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(720px,760px)_1fr]">
     <div class="hidden lg:block"><TOC headings={headings} /></div>
@@ -60,6 +74,9 @@ if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length)
 
       <!-- Ad am Artikelende -->
       <AdsSlot name="article-bottom" height={280} class="mt-8" />
+      <PrevNext currentSlug={currentSlug} category={frontmatter.category} />
+      <RelatedPosts currentSlug={currentSlug} category={frontmatter.category} tags={frontmatter.tags} />
+
     </article>
     <div class="hidden lg:block"></div>
     <div class="lg:col-start-2 lg:col-end-3">
@@ -77,4 +94,5 @@ if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length)
   </div>
 
   <script type="application/ld+json">{JSON.stringify(articleLD)}</script>
+  <script type="application/ld+json">{JSON.stringify(breadcrumbLD)}</script>
 </BaseLayout>

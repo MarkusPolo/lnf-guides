@@ -1,10 +1,12 @@
 ---
 import BaseLayout from './BaseLayout.astro';
-import SearchOverlay from '../components/SearchOverlay.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
 
-const { frontmatter } = Astro.props as any;
+const { frontmatter } = Astro.props as { frontmatter: any };
+
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const pubISO = new Date(frontmatter.pubDate).toISOString();
+const updISO = frontmatter.updatedDate ? new Date(frontmatter.updatedDate).toISOString() : undefined;
 
 const articleLD = {
   '@context': 'https://schema.org',
@@ -12,18 +14,37 @@ const articleLD = {
   headline: frontmatter.title,
   description: frontmatter.description,
   datePublished: pubISO,
+  ...(updISO ? { dateModified: updISO } : {}),
   image: frontmatter.cover ? [frontmatter.cover] : undefined,
-  mainEntityOfPage: String(canonical)
+  mainEntityOfPage: String(canonical),
+};
+
+const breadcrumbLD = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type':'ListItem', position:1, name:'News', item:new URL('/news/', Astro.site).toString() },
+    { '@type':'ListItem', position:2, name:frontmatter.title, item:new URL(Astro.url.pathname, Astro.site).toString() }
+  ]
 };
 ---
 
-<BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} ogImage={frontmatter.cover}>
-  <Fragment slot="search"><SearchOverlay /></Fragment>
-  <article class="mx-auto max-w-3xl px-4 mt-8 prose">
-    <h1>{frontmatter.title}</h1>
-    <p class="text-sm text-text2"><time datetime={pubISO}>{new Date(frontmatter.pubDate).toLocaleDateString('en-US')}</time></p>
-    {frontmatter.cover && <img src={frontmatter.cover} alt={frontmatter.title} loading="lazy" decoding="async" class="w-full aspect-[16/9] object-cover" />}
-    <slot />
-  </article>
+<BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} ogImage={frontmatter.cover} type="article">
+  <section class="mx-auto max-w-3xl px-4 mt-8">
+    <Breadcrumbs items={[{name:'News', href:'/news/'},{name:frontmatter.title}]} />
+    <h1 class="text-3xl font-extrabold">{frontmatter.title}</h1>
+    <p class="text-sm text-text2 mb-4">
+      <time datetime={pubISO}>{new Date(frontmatter.pubDate).toLocaleDateString('en-US')}</time>
+      {frontmatter.updatedDate && <span> • Updated <time datetime={updISO}>{new Date(frontmatter.updatedDate).toLocaleDateString('en-US')}</time></span>}
+    </p>
+    {frontmatter.cover && (
+      <img src={frontmatter.cover} alt={frontmatter.title} loading="lazy" decoding="async" class="w-full aspect-[16/9] object-cover rounded-card shadow-soft border border-border/60 mb-6" />
+    )}
+    <article class="prose prose-invert max-w-none">
+      <slot />
+    </article>
+  </section>
+
   <script type="application/ld+json">{JSON.stringify(articleLD)}</script>
+  <script type="application/ld+json">{JSON.stringify(breadcrumbLD)}</script>
 </BaseLayout>
