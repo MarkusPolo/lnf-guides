@@ -1,0 +1,32 @@
+---
+type ChangeSets = {
+  added?: string[];
+  changed?: string[];
+  fixed?: string[];
+  removed?: string[];
+  known?: string[];
+};
+
+const { changes } = Astro.props as { changes?: ChangeSets };
+
+const sections: { title: string; color: string; items: string[] }[] = [
+  { title: 'Added',        color: 'border-emerald-400/70 bg-emerald-950/30', items: changes?.added   ?? [] },
+  { title: 'Changed',      color: 'border-indigo-400/70 bg-indigo-950/30',   items: changes?.changed ?? [] },
+  { title: 'Fixed',        color: 'border-amber-400/70 bg-amber-950/30',     items: changes?.fixed   ?? [] },
+  { title: 'Removed',      color: 'border-rose-400/70 bg-rose-950/30',       items: changes?.removed ?? [] },
+  { title: 'Known issues', color: 'border-sky-400/70 bg-sky-950/30',         items: changes?.known   ?? [] },
+];
+---
+
+<div class="grid gap-4">
+  {sections.map((s) => (
+    s.items.length > 0 && (
+      <section class={`rounded-card border ${s.color} p-4`}>
+        <h3 class="text-text font-semibold mb-2">{s.title}</h3>
+        <ul class="space-y-1.5 marker:text-text2 pl-5 list-disc">
+          {s.items.map((line) => <li set:html={line} />)}
+        </ul>
+      </section>
+    )
+  ))}
+</div>

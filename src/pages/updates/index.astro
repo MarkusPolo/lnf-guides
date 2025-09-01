@@ -1,12 +1,96 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import SearchOverlay from '../../components/SearchOverlay.astro';
+import { getCollection } from 'astro:content';
+
+type Item = {
+  slug: string;
+  title: string;
+  description: string;
+  version: string;
+  pubDate: Date | string;
+  counts: { added: number; changed: number; fixed: number };
+};
+
+const all = await getCollection('updates');
+const items: Item[] = all
+  .map((e) => ({
+    slug: e.slug,
+    title: e.data.title as string,
+    description: e.data.description as string,
+    version: e.data.version as string,
+    pubDate: e.data.pubDate as Date,
+    counts: {
+      added:   (e.data.changes?.added?.length   ?? 0),
+      changed: (e.data.changes?.changed?.length ?? 0),
+      fixed:   (e.data.changes?.fixed?.length   ?? 0),
+    },
+  }))
+  .sort((a, b) => +new Date(b.pubDate) - +new Date(a.pubDate));
+
+const versions: string[] = Array.from(new Set(items.map((i) => String(i.version))));
+const canonical = new URL('/updates/', Astro.site);
 ---
 
-<BaseLayout title="Updates" description="Patch notes and meta analysis for Light No Fire.">
+<BaseLayout title="Updates" description="Patch notes & meta analysis." canonical={canonical}>
   <Fragment slot="search"><SearchOverlay /></Fragment>
+
   <section class="mx-auto max-w-7xl px-4 mt-8">
-    <h1 class="text-3xl font-extrabold">Updates</h1>
-    <p class="text-text2">Version filter & diff-like views follow next iteration.</p>
+    <header class="mb-6 flex flex-wrap items-end gap-4">
+      <div>
+        <h1 class="text-3xl font-extrabold">Updates</h1>
+        <p class="text-text2">Patch notes & meta analysis.</p>
+      </div>
+      <div class="ml-auto flex items-center gap-3">
+        <label for="ver" class="text-sm text-text2">Filter by version</label>
+        <select id="ver" class="bg-surface border border-border/60 rounded-card px-3 py-2">
+          <option value="">All</option>
+          {versions.map((v) => <option value={v}>{`v${v}`}</option>)}
+        </select>
+      </div>
+    </header>
+
+    <div id="updates-grid" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {items.map((it) => (
+        <a href={`/updates/${it.slug}/`} class="card p-4 border border-border/60 hover:bg-bg/60" data-version={it.version}>
+          <div class="flex items-center justify-between mb-2">
+            <div class="font-semibold">{it.title}</div>
+            <span class="rounded-full border border-border/60 px-2 py-0.5 text-xs">v{it.version}</span>
+          </div>
+          <p class="text-sm text-text2 mb-3">{it.description}</p>
+          <div class="flex gap-2 text-xs">
+            {it.counts.added   > 0 && <span class="rounded-full px-2 py-0.5 border border-emerald-400/50">Added {it.counts.added}</span>}
+            {it.counts.changed > 0 && <span class="rounded-full px-2 py-0.5 border border-indigo-400/50">Changed {it.counts.changed}</span>}
+            {it.counts.fixed   > 0 && <span class="rounded-full px-2 py-0.5 border border-amber-400/50">Fixed {it.counts.fixed}</span>}
+          </div>
+        </a>
+      ))}
+    </div>
   </section>
+
+  <script is:inline>
+    // @ts-nocheck
+    (function () {
+      const sel = /** @type {HTMLSelectElement|null} */(document.getElementById('ver'));
+      const grid = /** @type {HTMLElement|null} */(document.getElementById('updates-grid'));
+      if (!sel || !grid) return;
+
+      function apply() {
+        const v = sel.value;
+        grid.querySelectorAll('[data-version]').forEach((card) => {
+          const show = !v || card.getAttribute('data-version') === v;
+          /** @type {HTMLElement} */(card).style.display = show ? '' : 'none';
+        });
+        const url = new URL(location.href);
+        if (v) url.searchParams.set('v', v); else url.searchParams.delete('v');
+        history.replaceState({}, '', url.toString());
+      }
+
+      const pre = new URL(location.href).searchParams.get('v');
+      if (pre) sel.value = pre;
+
+      sel.addEventListener('change', apply);
+      apply();
+    })();
+  </script>
 </BaseLayout>
