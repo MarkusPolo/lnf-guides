@@ -1,0 +1,39 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const title = 'Privacy';
+const description = 'How we handle analytics, embeds, and your choices on LNF Guides.';
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<BaseLayout title={title} description={description} canonical={canonical}>
+  <section class="mx-auto max-w-3xl px-4 py-12">
+    <h1 class="text-3xl font-extrabold mb-4">{title}</h1>
+    <p class="text-text2 mb-8">
+      We aim to be lightweight and respectful. This page explains what may load and how you can control it.
+    </p>
+
+    <h2 class="text-xl font-bold mt-8 mb-2">Consent</h2>
+    <p class="mb-4">
+      When you first visit, you can accept or reject optional features. You can update your choices any time using the banner or by clearing your browser storage.
+    </p>
+
+    <h3 class="font-semibold mt-6 mb-2">Categories</h3>
+    <ul class="list-disc pl-6 space-y-2">
+      <li><strong>Analytics</strong> (Plausible): anonymous page analytics to improve content.</li>
+      <li><strong>External embeds</strong> (e.g., comments/YouTube): loaded only when enabled.</li>
+      <li><strong>Ads/Affiliates</strong>: shown only if enabled.</li>
+    </ul>
+
+    <h2 class="text-xl font-bold mt-8 mb-2">Data Processors</h2>
+    <ul class="list-disc pl-6 space-y-2">
+      <li><strong>Plausible Analytics</strong> – privacy-friendly, no cookies. Only loaded on opt-in.</li>
+      <li><strong>GitHub (Giscus)</strong> – comments widget, loaded on opt-in.</li>
+    </ul>
+
+    <h2 class="text-xl font-bold mt-8 mb-2">Contact</h2>
+    <p>
+      For questions, reach out via <a href="/contact/" class="underline">Contact</a>.
+    </p>
+  </section>
+</BaseLayout>

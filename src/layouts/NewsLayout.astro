@@ -4,22 +4,22 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
 import AdsSlot from '../components/AdsSlot.astro';
 import SearchOverlay from '../components/SearchOverlay.astro';
 
-const { frontmatter } = Astro.props as {
-  frontmatter: {
-    title: string;
-    description?: string;
-    pubDate: string | Date;
-    updatedDate?: string | Date;
-    tags?: string[];
-    cover?: string;
-    schema?: any;
-  };
+type FM = {
+  title: string;
+  description?: string;
+  pubDate: string | Date;
+  updatedDate?: string | Date;
+  tags?: string[];
+  cover?: string;
 };
+
+const { frontmatter } = Astro.props as { frontmatter: FM };
 
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const pubISO = new Date(frontmatter.pubDate).toISOString();
 const updISO = frontmatter.updatedDate ? new Date(frontmatter.updatedDate).toISOString() : undefined;
 
+// JSON-LD Article
 const articleLD = {
   '@context': 'https://schema.org',
   '@type': 'Article',
@@ -28,7 +28,7 @@ const articleLD = {
   datePublished: pubISO,
   ...(updISO ? { dateModified: updISO } : {}),
   image: frontmatter.cover ? [frontmatter.cover] : undefined,
-  mainEntityOfPage: String(canonical)
+  mainEntityOfPage: String(canonical),
 };
 ---
 
@@ -37,7 +37,7 @@ const articleLD = {
   description={frontmatter.description}
   canonical={canonical}
   ogImage={frontmatter.cover}
-  ogType="article"
+  type="article"
 >
   <Fragment slot="search"><SearchOverlay /></Fragment>
 
@@ -51,14 +51,22 @@ const articleLD = {
       ]} />
 
       <h1>{frontmatter.title}</h1>
+
       <p class="text-sm text-text2">
         <time datetime={pubISO}>{new Date(frontmatter.pubDate).toLocaleDateString('en-US')}</time>
-        {frontmatter.updatedDate && <span> • Updated <time datetime={updISO}>{new Date(frontmatter.updatedDate).toLocaleDateString('en-US')}</time></span>}
+        {frontmatter.updatedDate && (
+          <span> • Updated <time datetime={updISO}>{new Date(frontmatter.updatedDate).toLocaleDateString('en-US')}</time></span>
+        )}
       </p>
 
       {frontmatter.cover && (
-        <img src={frontmatter.cover} alt={frontmatter.title} loading="lazy" decoding="async"
-             class="w-full aspect-[16/9] object-cover rounded-card shadow-soft border border-border/60" />
+        <img
+          src={frontmatter.cover}
+          alt={frontmatter.title}
+          loading="lazy"
+          decoding="async"
+          class="w-full aspect-[16/9] object-cover rounded-card shadow-soft border border-border/60"
+        />
       )}
 
       <!-- Ad nach Hero -->
