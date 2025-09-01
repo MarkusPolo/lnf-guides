@@ -4,7 +4,7 @@ import mdx from '@astrojs/mdx';
 import tailwindcss from '@tailwindcss/vite';
 
 // IMPORTANT: Domain später anpassen
-const SITE = 'https://lnf-guides.example';
+const SITE = 'https://lnf-guides.com';
 
 export default defineConfig({
   site: SITE,

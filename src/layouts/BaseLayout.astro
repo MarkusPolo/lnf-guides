@@ -3,17 +3,18 @@ import "../styles/global.css";
 import ConsentBanner from "../components/ConsentBanner.astro";
 const { /* ... */ } = Astro.props;
 
-const {
-  title = 'LNF Guides',
-  description = 'Crisp guides, spoiler-safe tips, and meta updates – built by players, for players.',
-  canonical,
-  ogImage = '/images/og-default.jpg'
-} = Astro.props;
+const { title, description, canonical, ogImage, type = 'website', category } = Astro.props as any;
 
-const site = Astro.site?.origin ?? 'https://lnf-guides.example';
+const site = Astro.site?.origin ?? 'https://lnf-guides.com';
 const url = canonical ?? new URL(Astro.url.pathname, site);
+const siteUrl = String(Astro.site);
 
 const OG = { title, description, image: ogImage };
+const ogFallbackByCategory: Record<string,string> = {
+  dragons: '/images/og/dragons.png',
+  beginners: '/images/og/beginners.png',
+};
+const finalOg = ogImage || ogFallbackByCategory[category] || '/images/og/default.png';
 const PLAUSIBLE_DOMAIN = 'lnf-guides.example';
 ---
 
@@ -24,18 +25,21 @@ const PLAUSIBLE_DOMAIN = 'lnf-guides.example';
     <link rel="canonical" href={String(url)} />
 
     <title>{title}</title>
-    <meta name="description" content={description} />
+      <meta name="description" content={description} />
+      <link rel="canonical" href={String(canonical)} />
 
     <!-- OG / Twitter -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content={OG.title} />
-    <meta property="og:description" content={OG.description} />
-    <meta property="og:image" content={OG.image} />
-    <meta property="og:url" content={String(url)} />
+    <meta property="og:type" content={type} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={String(canonical)} />
+    <meta property="og:image" content={finalOg} />
+    <meta property="og:site_name" content="LNF Guides" />
+
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={OG.title} />
-    <meta name="twitter:description" content={OG.description} />
-    <meta name="twitter:image" content={OG.image} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={finalOg} />
 
     <link rel="icon" href="/images/logo.svg" type="image/svg+xml" />
 
@@ -66,6 +70,25 @@ const PLAUSIBLE_DOMAIN = 'lnf-guides.example';
 
     <!-- Plausible -->
     <script defer data-domain={PLAUSIBLE_DOMAIN} src="https://plausible.io/js/script.js"></script>
+    <script type="application/ld+json">{JSON.stringify({
+      "@context":"https://schema.org",
+      "@type":"Organization",
+      "name":"LNF Guides",
+      "url": siteUrl,
+      "logo": "/images/logo.svg"
+    })}</script>
+
+    <script type="application/ld+json">{JSON.stringify({
+      "@context":"https://schema.org",
+      "@type":"WebSite",
+      "url": siteUrl,
+      "name":"LNF Guides",
+      "potentialAction":{
+        "@type":"SearchAction",
+        "target": `${siteUrl}?q={search_term_string}`,
+        "query-input":"required name=search_term_string"
+      }
+    })}</script>
   </head>
   <body class="font-sans">
     <a href="#content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:bg-surface focus:px-3 focus:py-2 focus:rounded">Skip to content</a>
