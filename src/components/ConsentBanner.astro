@@ -1,215 +1,285 @@
 ---
 /**
- * DSGVO Consent – Banner + Modal
- * Speichert unter lnf-consent-v1 (policyVersion-gebunden)
- * Stellt globale API bereit:
- *   window.consent = {
- *     KEY, get(), getRecord(), set(partial), setAll(value), decided(), policyVersion
- *   }
- * sowie window.consentUI.open() / window.managePrivacy()
+ * DSGVO-Consent Banner + UI
+ * - Globale API: window.consent (get/set/setAll/decided)
+ * - Globale UI:  window.consentUI.open(mode), window.consentUI.close()
+ * - Trigger:     Klick auf [data-privacy-open] öffnet Einstellungen
  */
-const POLICY_VERSION = 1;
+
 const STORAGE_KEY = 'lnf-consent-v1';
+const POLICY_VERSION = 1;
 ---
 
-<!-- Overlay (Customize) -->
-<div id="consent-overlay" class="fixed inset-0 z-[1150] hidden">
-  <!-- backdrop -->
-  <div class="absolute inset-0 bg-bg/95 supports-[backdrop-filter]:bg-bg/60 backdrop-blur" data-consent-backdrop></div>
+<div
+  id="consent-root"
+  class="fixed inset-0 z-[2000] hidden"
+  data-storage-key={STORAGE_KEY}
+  data-policy-version={String(POLICY_VERSION)}
+  aria-hidden="true"
+>
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/70"></div>
 
-  <!-- dialog -->
-  <div class="relative mx-auto mt-24 w-[min(680px,calc(100%-2rem))] rounded-card border border-border/60 bg-surface shadow-soft">
-    <div class="flex items-start justify-between p-4 md:p-5 border-b border-border/60">
-      <h2 class="text-lg font-semibold">Customize privacy</h2>
-      <button type="button" class="text-text2 hover:text-text" data-consent-close aria-label="Close">Close</button>
-    </div>
-
-    <form id="consent-form" class="p-4 md:p-5 space-y-4">
-      <label class="flex gap-3 items-start p-3 rounded-card border border-border/60 bg-[#111624]">
-        <input id="ck-analytics" type="checkbox" class="mt-1" />
-        <span>
-          <div class="font-semibold">Analytics (Plausible)</div>
-          <div class="text-sm text-text2">Anonymous, no cookies. Helps us improve content.</div>
-        </span>
-      </label>
-
-      <label class="flex gap-3 items-start p-3 rounded-card border border-border/60 bg-[#111624]">
-        <input id="ck-external" type="checkbox" class="mt-1" />
-        <span>
-          <div class="font-semibold">External embeds (e.g., comments/YouTube)</div>
-          <div class="text-sm text-text2">Loads third-party content (e.g. YouTube, Giscus) that may process your IP.</div>
-        </span>
-      </label>
-
-      <label class="flex gap-3 items-start p-3 rounded-card border border-border/60 bg-[#111624] opacity-50 cursor-not-allowed">
-        <input id="ck-ads" type="checkbox" class="mt-1" disabled />
-        <span>
-          <div class="font-semibold">Ads</div>
-          <div class="text-sm text-text2">Currently disabled. Future ad networks require explicit opt-in.</div>
-        </span>
-      </label>
-
-      <div class="flex items-center justify-end gap-3 pt-2">
-        <button type="button" data-consent-reject class="btn btn-outline">Reject all</button>
-        <button type="submit" class="btn btn-primary">Save</button>
+  <!-- Panel (Banner/Einstellungen) -->
+  <div class="relative z-[1] mx-auto mt-16 w-[min(680px,calc(100%-2rem))] rounded-card border border-border/60 bg-[#111624] shadow-soft">
+    <!-- Banner-Ansicht -->
+    <div id="consent-banner" class="p-4 md:p-5">
+      <h2 class="text-xl font-semibold mb-2">Privacy Preferences</h2>
+      <p class="text-sm text-text2">
+        We use cookies and similar technologies to provide essential functionality. With your consent, we also use analytics and embed external media (e.g., YouTube, Giscus). You can change your preferences anytime.
+      </p>
+      <div class="mt-4 flex flex-col md:flex-row gap-3">
+        <button id="btn-accept-all" class="btn btn-primary md:w-auto w-full">Accept all</button>
+        <button id="btn-reject-non" class="btn btn-outline md:w-auto w-full">Reject non-essential</button>
+        <button id="btn-open-settings" class="btn btn-outline md:ml-auto md:w-auto w-full">Customize</button>
       </div>
-    </form>
-  </div>
-</div>
-
-<!-- Banner (Prompt) -->
-<div id="consent-banner" class="fixed inset-x-0 bottom-0 z-[1100] bg-bg/80 border-t border-border/60">
-  <div class="mx-auto max-w-7xl px-4 py-3 md:flex items-start justify-between gap-6">
-    <div class="text-sm text-text2 sm:text-left">
-      <strong class="text-text">Privacy preferences</strong><br />
-      We use optional analytics and may load external embeds. Choose what you allow. You can change this anytime.
-      <button type="button" data-open-consent class="ml-2 underline hover:text-text">Manage privacy</button>
     </div>
-    <div class="mt-3 md:mt-0 flex items-center gap-2">
-      <button type="button" data-consent-reject class="btn btn-outline">Reject all</button>
-      <button type="button" data-open-consent class="btn btn-outline">Customize</button>
-      <button type="button" data-consent-accept class="btn btn-primary">Accept all</button>
+
+    <!-- Einstellungen -->
+    <div id="consent-settings" class="hidden p-4 md:p-5 border-t border-border/60">
+      <h3 class="text-lg font-semibold mb-3">Customize preferences</h3>
+
+      <div class="space-y-2 mb-4">
+        <div class="flex items-start justify-between gap-3 p-3 rounded-card border border-border/60 bg-[#0f1422]">
+          <div>
+            <div class="font-semibold">Essential</div>
+            <div class="text-sm text-text2">Required for basic functionality. Always on.</div>
+          </div>
+          <input type="checkbox" checked disabled class="opacity-50" />
+        </div>
+
+        <div class="flex items-start justify-between gap-3 p-3 rounded-card border border-border/60 bg-[#0f1422]">
+          <div>
+            <label for="c-analytics" class="font-semibold cursor-pointer">Analytics</label>
+            <div class="text-sm text-text2">Anonymous usage statistics to improve the site.</div>
+          </div>
+          <input id="c-analytics" type="checkbox" class="cursor-pointer" />
+        </div>
+
+        <div class="flex items-start justify-between gap-3 p-3 rounded-card border border-border/60 bg-[#0f1422]">
+          <div>
+            <label for="c-external" class="font-semibold cursor-pointer">External embeds</label>
+            <div class="text-sm text-text2">Loads external media (YouTube, Giscus, etc.).</div>
+          </div>
+          <input id="c-external" type="checkbox" class="cursor-pointer" />
+        </div>
+
+        <div class="flex items-start justify-between gap-3 p-3 rounded-card border border-border/60 bg-[#0f1422]">
+          <div>
+            <label for="c-ads" class="font-semibold cursor-pointer">Ads (non-personalized by default)</label>
+            <div class="text-sm text-text2">Allows loading ad slots. Personalization only with consent.</div>
+          </div>
+          <input id="c-ads" type="checkbox" class="cursor-pointer" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <button id="btn-back" class="btn btn-outline">Back</button>
+        <div class="flex gap-3">
+          <button id="btn-save" class="btn btn-primary">Save choices</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-  // ----------------- constants (client) -----------------
-  const STORAGE_KEY_JS = 'lnf-consent-v1';
-  const POLICY_V = 1;
+  (function () {
+    const root = document.getElementById('consent-root');
+    if (!root) return;
 
-  // ----------------- storage helpers -----------------
-  const read = () => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY_JS) || 'null'); }
-    catch { return null; }
-  };
-  const write = (obj) => {
-    localStorage.setItem(STORAGE_KEY_JS, JSON.stringify(obj));
-    // fire event with simple shape so Gates can react
-    window.dispatchEvent(new CustomEvent('consent:changed', { detail: obj.decisions }));
-  };
-  const makeRecord = (decisions) => ({
-    version: 1,
-    policyVersion: POLICY_V,
-    ts: Date.now(),
-    decisions: {
-      analytics: !!decisions.analytics,
-      external: !!decisions.external,
-      ads: !!decisions.ads,
-    }
-  });
+    const storageKey = root.getAttribute('data-storage-key') || 'lnf-consent-v1';
+    const policyVersion = Number(root.getAttribute('data-policy-version') || '1');
 
-  // ----------------- Global API (compat + new) -----------------
-  // get() returns the old/simple shape used across your site
-  window.consent = {
-    KEY: STORAGE_KEY_JS,
-    get() {
-      const r = read();
-      if (r && r.policyVersion === POLICY_V) return { ...r.decisions, ts: r.ts };
-      return { analytics: false, external: false, ads: false, ts: 0 };
-    },
-    getRecord() {
-      const r = read();
-      return r ?? makeRecord({ analytics: false, external: false, ads: false });
-    },
-    set(partial) {
-      const cur = this.getRecord();
-      const next = makeRecord({ ...cur.decisions, ...partial });
-      write(next);
-    },
-    setAll(value) {
-      write(makeRecord({ analytics: !!value, external: !!value, ads: !!value }));
-    },
-    decided() {
-      const r = read();
-      return !!r?.ts && r.policyVersion === POLICY_V;
-    },
-    policyVersion: POLICY_V
-  };
-
-  // ----------------- UI logic -----------------
-  const overlay = document.getElementById('consent-overlay');
-  const banner  = document.getElementById('consent-banner');
-  const form    = document.getElementById('consent-form');
-  const ckA = document.getElementById('ck-analytics');
-  const ckE = document.getElementById('ck-external');
-  const ckAds = document.getElementById('ck-ads');
-
-  const openOverlay = (focusField) => {
-    const rec = window.consent.get();
-    ckA.checked = !!rec.analytics;
-    ckE.checked = !!rec.external;
-    ckAds.checked = !!rec.ads; // currently disabled UI
-    overlay.classList.remove('hidden');
-    document.documentElement.classList.add('overflow-hidden');
-    if (focusField === 'external') ckE?.focus();
-    window.dispatchEvent(new CustomEvent('consent:open'));
-  };
-  const closeOverlay = () => {
-    overlay.classList.add('hidden');
-    document.documentElement.classList.remove('overflow-hidden');
-    window.dispatchEvent(new CustomEvent('consent:close'));
-  };
-
-  // Exponieren (für beliebige Buttons/Links)
-  window.consentUI = { open: (focus) => openOverlay(focus), close: () => closeOverlay() };
-  window.managePrivacy = () => openOverlay();
-
-  // Delegation: funktioniert für
-  //  - [data-open-consent]
-  //  - [data-manage-privacy]
-  //  - a[href*="privacy"], a[href="#privacy"], a[href*="manage-privacy"]
-  document.addEventListener('click', (e) => {
-    const t = e.target;
-    const openTrigger =
-      t.closest?.('[data-open-consent]') ||
-      t.closest?.('[data-manage-privacy]') ||
-      t.closest?.('a[href*="privacy"]') ||
-      t.closest?.('a[href="#privacy"]') ||
-      t.closest?.('a[href*="manage-privacy"]');
-
-    if (openTrigger) {
-      e.preventDefault();
-      openOverlay();
-    }
-
-    if (t.closest?.('[data-consent-close]') || t.closest?.('[data-consent-backdrop]')) {
-      e.preventDefault();
-      closeOverlay();
-    }
-  });
-
-  // Keyboard ESC schließt
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeOverlay();
-  });
-
-  // Banner nur zeigen, wenn noch nicht entschieden (oder Policy bump)
-  if (window.consent.decided()) banner?.remove();
-
-  // Buttons
-  const acceptAll = () => {
-    window.consent.setAll(true);
-    banner?.remove();
-    closeOverlay();
-  };
-  const rejectAll = () => {
-    window.consent.setAll(false);
-    banner?.remove();
-    closeOverlay();
-  };
-
-  document.querySelectorAll('[data-consent-accept]').forEach(b => b.addEventListener('click', acceptAll));
-  document.querySelectorAll('[data-consent-reject]').forEach(b => b.addEventListener('click', rejectAll));
-
-  form?.addEventListener('submit', (ev) => {
-    ev.preventDefault();
-    window.consent.set({
-      analytics: ckA.checked,
-      external: ckE.checked,
-      ads: ckAds.checked
+    // ---------- storage helpers ----------
+    const defaults = () => ({
+      version: 1,
+      policyVersion,
+      ts: 0,
+      decisions: { analytics: false, external: false, ads: false }
     });
-    banner?.remove();
-    closeOverlay();
-  });
+
+    function read() {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return defaults();
+        const parsed = JSON.parse(raw);
+        // simple shape guard
+        if (!parsed || typeof parsed !== 'object' || !parsed.decisions) return defaults();
+        return {
+          version: 1,
+          policyVersion: parsed.policyVersion || policyVersion,
+          ts: parsed.ts || 0,
+          decisions: {
+            analytics: !!parsed.decisions.analytics,
+            external:  !!parsed.decisions.external,
+            ads:       !!parsed.decisions.ads,
+          }
+        };
+      } catch {
+        return defaults();
+      }
+    }
+
+    function write(state) {
+      localStorage.setItem(storageKey, JSON.stringify(state));
+      // Event für Embeds & Skripte
+      window.dispatchEvent(new CustomEvent('consent:changed', { detail: state.decisions }));
+    }
+
+    function decided() {
+      const s = read();
+      return !!s.ts && s.policyVersion === policyVersion;
+    }
+
+    function set(partial) {
+      const s = read();
+      const updated = {
+        ...s,
+        policyVersion,
+        ts: Date.now(),
+        decisions: { ...s.decisions, ...partial }
+      };
+      write(updated);
+      return updated;
+    }
+
+    function setAll(value) {
+      const updated = {
+        version: 1,
+        policyVersion,
+        ts: Date.now(),
+        decisions: { analytics: !!value, external: !!value, ads: !!value }
+      };
+      write(updated);
+      return updated;
+    }
+
+    // ---------- expose global API ----------
+    if (!window.consent) {
+      window.consent = {
+        get: () => read().decisions,
+        set,
+        setAll,
+        decided,
+        KEY: storageKey,
+        version: 1,
+        policyVersion
+      };
+    }
+
+    // ---------- UI controls ----------
+    const banner = document.getElementById('consent-banner');
+    const settings = document.getElementById('consent-settings');
+
+    const btnAcceptAll   = document.getElementById('btn-accept-all');
+    const btnRejectNon   = document.getElementById('btn-reject-non');
+    const btnOpenSettings= document.getElementById('btn-open-settings');
+    const btnBack        = document.getElementById('btn-back');
+    const btnSave        = document.getElementById('btn-save');
+
+    const cAnalytics = document.getElementById('c-analytics');
+    const cExternal  = document.getElementById('c-external');
+    const cAds       = document.getElementById('c-ads');
+
+    function showRoot() {
+      root.classList.remove('hidden');
+      root.setAttribute('aria-hidden', 'false');
+      document.documentElement.style.overflow = 'hidden';
+    }
+    function hideRoot() {
+      root.classList.add('hidden');
+      root.setAttribute('aria-hidden', 'true');
+      document.documentElement.style.overflow = '';
+    }
+    function showBanner() {
+      banner?.classList.remove('hidden');
+      settings?.classList.add('hidden');
+      showRoot();
+    }
+    function showSettings() {
+      settings?.classList.remove('hidden');
+      banner?.classList.add('hidden');
+      showRoot();
+    }
+    function fillSettingsFromState() {
+      const s = read();
+      if (cAnalytics) cAnalytics.checked = !!s.decisions.analytics;
+      if (cExternal)  cExternal.checked  = !!s.decisions.external;
+      if (cAds)       cAds.checked       = !!s.decisions.ads;
+    }
+
+    // Buttons
+    btnAcceptAll?.addEventListener('click', () => {
+      setAll(true);
+      hideRoot();
+    });
+
+    btnRejectNon?.addEventListener('click', () => {
+      // nur essential an, alles andere aus
+      set({ analytics: false, external: false, ads: false });
+      hideRoot();
+    });
+
+    btnOpenSettings?.addEventListener('click', () => {
+      fillSettingsFromState();
+      showSettings();
+    });
+
+    btnBack?.addEventListener('click', () => {
+      showBanner();
+    });
+
+    btnSave?.addEventListener('click', () => {
+      set({
+        analytics: !!(cAnalytics && cAnalytics.checked),
+        external:  !!(cExternal  && cExternal.checked),
+        ads:       !!(cAds       && cAds.checked),
+      });
+      hideRoot();
+    });
+
+    // Klicken auf Backdrop -> schließen (nur Settings; Banner bleibt beim Erstbesuch sichtbar)
+    root.addEventListener('click', (e) => {
+      if (e.target === root) {
+        if (decided()) hideRoot();
+      }
+    });
+
+    // Globale UI-API (auch für manuelles Reopen)
+    window.consentUI = {
+      open: (mode) => {
+        if (mode === 'settings') {
+          fillSettingsFromState();
+          showSettings();
+        } else {
+          // Standard: Banner, außer es gibt bereits eine Entscheidung -> dann settings
+          if (decided()) {
+            fillSettingsFromState();
+            showSettings();
+          } else {
+            showBanner();
+          }
+        }
+      },
+      close: hideRoot
+    };
+
+    // Bequemer Alias
+    window.managePrivacy = () => window.consentUI.open('settings');
+
+    // Delegation: beliebiges Element mit [data-privacy-open] öffnet UI
+    document.addEventListener('click', (ev) => {
+      const trigger = (ev.target && (ev.target.closest?.('[data-privacy-open]')));
+      if (trigger) {
+        ev.preventDefault();
+        window.consentUI.open('settings');
+      }
+    });
+
+    // Beim ersten Besuch Banner zeigen, sonst versteckt bleiben
+    if (!decided()) {
+      showBanner();
+    }
+  })();
 </script>

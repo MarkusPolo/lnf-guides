@@ -9,6 +9,7 @@ interface Props {
   theme?: string;
   class?: string;
 }
+
 const {
   repo,
   repoId,
@@ -30,7 +31,7 @@ const cfg = { repo, repoId, category, categoryId, mapping, lang, theme };
     <div id={hostId} class="min-h-[200px]">
       <div class="text-sm text-text2">
         Comments are blocked until you enable <strong>External embeds</strong> in your privacy settings.
-        <button type="button" class="underline ml-1" data-giscus-open-privacy>Manage privacy</button>
+        <button data-privacy-open class="underline">Privacy settings</button>
       </div>
     </div>
   </div>
@@ -39,29 +40,42 @@ const cfg = { repo, repoId, category, categoryId, mapping, lang, theme };
 <script define:vars={{ hostId, cfg }}>
   // @ts-nocheck
   (function () {
-    const STORAGE_KEY = "lnf-consent";
-
+    const LS_KEYS = ["lnf-consent-v1", "lnf-consent"]; // lese beide zur Sicherheit
     let mounted = false;
-    let pollTimer = null;
 
-    function getState() {
+    function readLS() {
+      for (const k of LS_KEYS) {
+        try {
+          const raw = localStorage.getItem(k);
+          if (raw) return JSON.parse(raw);
+        } catch {}
+      }
+      return null;
+    }
+
+    // Liefert immer die Decisions-Form { analytics, external, ads }
+    function getDecisions() {
       try {
         const viaApi = window.consent?.get?.();
-        if (viaApi && typeof viaApi === "object") return viaApi;
+        if (viaApi && typeof viaApi === "object") {
+          // Kann entweder direkt die Decisions sein ODER ein Record
+          if ("external" in viaApi || "analytics" in viaApi || "ads" in viaApi) return viaApi;
+          if ("decisions" in viaApi) return viaApi.decisions;
+        }
       } catch {}
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : null;
-      } catch { return null; }
+      const rec = readLS();
+      if (rec?.decisions) return rec.decisions;
+      return { analytics: false, external: false, ads: false };
     }
+
     function allowExternal() {
-      const s = getState();
-      return !!s?.decisions?.external;
+      return !!getDecisions().external;
     }
 
     function mountGiscus() {
       const host = document.getElementById(hostId);
       if (!host) return;
+      // Schon vorhanden?
       if (host.querySelector("iframe.giscus-frame") || document.getElementById("giscus-script")) {
         mounted = true;
         return;
@@ -87,39 +101,33 @@ const cfg = { repo, repoId, category, categoryId, mapping, lang, theme };
       mounted = true;
     }
 
-    function showBlocked() {
+    function unmountGiscus() {
       const host = document.getElementById(hostId);
       if (!host) return;
       host.innerHTML =
-        '<div class="text-sm text-text2">Comments are blocked until you enable <strong>External embeds</strong> in your privacy settings. <button type="button" class="underline ml-1" data-giscus-open-privacy>Manage privacy</button></div>';
+        '<div class="text-sm text-text2">Comments are blocked until you enable <strong>External embeds</strong> in your privacy settings. <button data-privacy-open class="underline">Privacy settings</button></div>';
       document.getElementById("giscus-script")?.remove();
       mounted = false;
     }
 
     function apply() {
       if (allowExternal()) mountGiscus();
-      else showBlocked();
+      else unmountGiscus();
     }
 
-    document.addEventListener("click", (e) => {
-      const t = e.target;
-      if (t && t.matches?.("[data-giscus-open-privacy]")) {
-        window.consent?.open?.();
+    // Auf beide Event-Varianten reagieren (detail kann Decisions ODER Record sein)
+    function onConsentEvent(e) {
+      const d = e?.detail;
+      const decisions = d && (d.external !== undefined ? d : d.decisions);
+      if (decisions && decisions.external === true) {
+        mountGiscus();
+      } else {
+        unmountGiscus();
       }
-    });
+    }
 
-    window.addEventListener("consent:updated", apply);
-    document.addEventListener("DOMContentLoaded", () => {
-      apply();
-      if (!mounted) {
-        pollTimer = setInterval(() => {
-          if (allowExternal()) {
-            apply();
-            clearInterval(pollTimer);
-          }
-        }, 800);
-        setTimeout(() => clearInterval(pollTimer), 6000);
-      }
-    });
+    document.addEventListener("DOMContentLoaded", apply);
+    window.addEventListener("consent:changed", onConsentEvent);
+    window.addEventListener("consent:updated", onConsentEvent);
   })();
 </script>
