@@ -1,16 +1,17 @@
 ---
 /**
- * DSGVO-freundlicher Ad-Slot:
- * - Lädt KEINE Third-Party-Skripte ohne consent.ads === true
- * - Zeigt bis dahin eine House-Ad / Support-Kachel (SEO-freundlich, kein CLS)
- * - Optionaler Provider "adsense" (nicht-personalisiert via NPA), nur bei Zustimmung
+ * DSGVO-freundlicher Ad-Slot mit Personalisierung:
+ * - Lädt AdSense nur wenn consent.ads === true
+ * - Personalisierung NUR wenn consent.adsPersonalized === true
+ *   -> (window.adsbygoogle.requestNonPersonalizedAds = 0/1)
+ * - Ohne Consent: House-Ad
  *
  * Props:
- *  - name: string               (Slot-Name, z.B. "article-top")
- *  - height?: number = 250      (feste Slot-Höhe gegen CLS)
+ *  - name: string
+ *  - height?: number = 250
  *  - provider?: 'house' | 'adsense' = 'house'
- *  - adsClient?: string         (z.B. "ca-pub-1234567890" – nötig bei provider='adsense')
- *  - adSlot?: string            (deine AdSense Slot-ID, z.B. "1234567890")
+ *  - adsClient?: string   (erforderlich bei adsense)
+ *  - adSlot?: string      (erforderlich bei adsense)
  *  - class?: string
  */
 
@@ -44,7 +45,6 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
   data-ad-slot={adSlot}
   data-height={String(height)}
 >
-  <!-- Fallback / House-Ad (sichtbar bis Consent erteilt) -->
   <div class="h-full flex items-center justify-between gap-3 p-4">
     <div class="text-left">
       <div class="text-sm text-text2 mb-1">Support LNF Guides</div>
@@ -63,7 +63,7 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
   (function(){
     const root =
       document.currentScript?.previousElementSibling ||
-      document.getElementById({wrapId: ''}.wrapId) || // dummy to keep esbuild happy
+      document.querySelector('#{wrapId}'.replace('#','')) || // harmless
       document.querySelector('[data-provider]');
     if (!root) return;
 
@@ -72,8 +72,8 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
     const adSlot     = root.getAttribute('data-ad-slot') || '';
     const height     = Number(root.getAttribute('data-height') || '250');
 
-    // ---- Consent helpers (LS-Fallback, unterstützt alte/neue Keys) ----
-    const LS_KEYS = ['lnf-consent-v1', 'lnf-consent'];
+    // ---- Consent helpers ----
+    const LS_KEYS = ['lnf-consent-v1','lnf-consent'];
     function readLS() {
       for (const k of LS_KEYS) {
         try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw); } catch {}
@@ -83,15 +83,19 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
     function getDecisions() {
       try {
         const via = window.consent?.get?.();
-        if (via && (via.ads !== undefined || via.external !== undefined)) return via;
+        if (via && (via.ads !== undefined)) return via;
         if (via?.decisions) return via.decisions;
       } catch {}
-      return readLS()?.decisions || { analytics:false, external:false, ads:false };
+      const d = readLS()?.decisions || {};
+      return {
+        analytics: !!d.analytics,
+        external: !!d.external,
+        ads: !!d.ads,
+        adsPersonalized: !!d.adsPersonalized
+      };
     }
-    function hasAdsConsent() { return !!getDecisions().ads; }
 
-    // ---- Renderer ----
-    function clearChildren(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+    function clearChildren(el){ while (el.firstChild) el.removeChild(el.firstChild); }
 
     function renderHouse() {
       clearChildren(root);
@@ -110,7 +114,6 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
       root.appendChild(box);
     }
 
-    // --- AdSense (nicht-personalisiert standard) ---
     function ensureAdSenseScript(client) {
       const id = 'adsbygoogle-js';
       if (document.getElementById(id)) return;
@@ -122,43 +125,41 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
       document.head.appendChild(s);
     }
 
-    function mountAdSense() {
+    function mountAdSense({ personalized }){
       if (!adsClient || !adSlot) { renderHouse(); return; }
-
-      // Script nur mit Consent laden
       ensureAdSenseScript(adsClient);
 
       clearChildren(root);
 
-      // NPA (non-personalized) default – Personalisiert nur, wenn du das explizit anders behandelst.
-      try { (window.adsbygoogle = window.adsbygoogle || []).requestNonPersonalizedAds = 1; } catch {}
+      // Personalisierung steuern (NPA: 1 = non-personalized, 0 = personalized)
+      try {
+        const npa = personalized ? 0 : 1;
+        (window.adsbygoogle = window.adsbygoogle || []).requestNonPersonalizedAds = npa;
+      } catch {}
 
-      // INS Container
       const ins = document.createElement('ins');
       ins.className = 'adsbygoogle';
       ins.style.cssText = `display:block; min-height:${height}px;`;
       ins.setAttribute('data-ad-client', adsClient);
       ins.setAttribute('data-ad-slot', adSlot);
       ins.setAttribute('data-full-width-responsive', 'true');
+
       root.appendChild(ins);
 
-      // Trigger fill
-      try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {
-        // Falls zu früh: House rendern als Fallback
+      try { (window.adsbygoogle = window.adsbygoogle || []).push({}); }
+      catch { renderHouse(); }
+    }
+
+    function apply(){
+      const d = getDecisions();
+      if (!d.ads) { renderHouse(); return; }
+      if (provider === 'adsense') {
+        mountAdSense({ personalized: !!d.adsPersonalized });
+      } else {
         renderHouse();
       }
     }
 
-    function apply() {
-      if (!hasAdsConsent()) {
-        renderHouse();
-        return;
-      }
-      if (provider === 'adsense') mountAdSense();
-      else renderHouse();
-    }
-
-    // Erste Anwendung + spätere Änderungen
     apply();
     window.addEventListener('consent:changed', apply);
     window.addEventListener('consent:updated', apply);

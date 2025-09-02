@@ -1,13 +1,17 @@
 ---
 /**
  * DSGVO-Consent Banner + UI
- * - Globale API: window.consent (get/set/setAll/decided)
+ * - Globale API: window.consent (get/set/setAll/decided/open)
  * - Globale UI:  window.consentUI.open(mode), window.consentUI.close()
  * - Trigger:     Klick auf [data-privacy-open] öffnet Einstellungen
+ *
+ * NEU:
+ *  - Zusätzliche Feinsteuerung: adsPersonalized (separat von ads)
+ *  - POLICY_VERSION = 2  -> erzwingt erneute Abfrage (Neuer Zweck)
  */
 
 const STORAGE_KEY = 'lnf-consent-v1';
-const POLICY_VERSION = 1;
+const POLICY_VERSION = 2; // <- neu
 ---
 
 <div
@@ -20,13 +24,14 @@ const POLICY_VERSION = 1;
   <!-- Backdrop -->
   <div class="absolute inset-0 bg-black/70"></div>
 
-  <!-- Panel (Banner/Einstellungen) -->
+  <!-- Panel -->
   <div class="relative z-[1] mx-auto mt-16 w-[min(680px,calc(100%-2rem))] rounded-card border border-border/60 bg-[#111624] shadow-soft">
-    <!-- Banner-Ansicht -->
+    <!-- Banner -->
     <div id="consent-banner" class="p-4 md:p-5">
       <h2 class="text-xl font-semibold mb-2">Privacy Preferences</h2>
       <p class="text-sm text-text2">
-        We use cookies and similar technologies to provide essential functionality. With your consent, we also use analytics and embed external media (e.g., YouTube, Giscus). You can change your preferences anytime.
+        We use cookies and similar technologies to provide essential functionality. With your consent, we also use analytics, external embeds (e.g., YouTube, Giscus) and ads.
+        You can change your preferences anytime.
       </p>
       <div class="mt-4 flex flex-col md:flex-row gap-3">
         <button id="btn-accept-all" class="btn btn-primary md:w-auto w-full">Accept all</button>
@@ -35,7 +40,7 @@ const POLICY_VERSION = 1;
       </div>
     </div>
 
-    <!-- Einstellungen -->
+    <!-- Settings -->
     <div id="consent-settings" class="hidden p-4 md:p-5 border-t border-border/60">
       <h3 class="text-lg font-semibold mb-3">Customize preferences</h3>
 
@@ -51,7 +56,7 @@ const POLICY_VERSION = 1;
         <div class="flex items-start justify-between gap-3 p-3 rounded-card border border-border/60 bg-[#0f1422]">
           <div>
             <label for="c-analytics" class="font-semibold cursor-pointer">Analytics</label>
-            <div class="text-sm text-text2">Anonymous usage statistics to improve the site.</div>
+            <div class="text-sm text-text2">Anonymous usage statistics (Plausible).</div>
           </div>
           <input id="c-analytics" type="checkbox" class="cursor-pointer" />
         </div>
@@ -64,12 +69,27 @@ const POLICY_VERSION = 1;
           <input id="c-external" type="checkbox" class="cursor-pointer" />
         </div>
 
-        <div class="flex items-start justify-between gap-3 p-3 rounded-card border border-border/60 bg-[#0f1422]">
-          <div>
-            <label for="c-ads" class="font-semibold cursor-pointer">Ads (non-personalized by default)</label>
-            <div class="text-sm text-text2">Allows loading ad slots. Personalization only with consent.</div>
+        <div class="p-3 rounded-card border border-border/60 bg-[#0f1422]">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <label for="c-ads" class="font-semibold cursor-pointer">Ads</label>
+              <div class="text-sm text-text2">Allows loading ad slots (non-personalized by default).</div>
+            </div>
+            <input id="c-ads" type="checkbox" class="cursor-pointer" />
           </div>
-          <input id="c-ads" type="checkbox" class="cursor-pointer" />
+
+          <!-- Nested: Personalized ads -->
+          <div class="mt-3 pl-6 border-l border-dashed border-border/60">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <label for="c-ads-p" class="font-semibold cursor-pointer">Personalized ads</label>
+                <div class="text-sm text-text2">
+                  Use your data to personalize ads (requires explicit consent; otherwise non-personalized ads are requested).
+                </div>
+              </div>
+              <input id="c-ads-p" type="checkbox" class="cursor-pointer" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -89,42 +109,41 @@ const POLICY_VERSION = 1;
     if (!root) return;
 
     const storageKey = root.getAttribute('data-storage-key') || 'lnf-consent-v1';
-    const policyVersion = Number(root.getAttribute('data-policy-version') || '1');
+    const policyVersion = Number(root.getAttribute('data-policy-version') || '2');
 
-    // ---------- storage helpers ----------
+    // ---------- storage ----------
     const defaults = () => ({
-      version: 1,
+      version: 2,
       policyVersion,
       ts: 0,
-      decisions: { analytics: false, external: false, ads: false }
+      decisions: { analytics: false, external: false, ads: false, adsPersonalized: false }
     });
 
     function read() {
       try {
         const raw = localStorage.getItem(storageKey);
         if (!raw) return defaults();
-        const parsed = JSON.parse(raw);
-        // simple shape guard
-        if (!parsed || typeof parsed !== 'object' || !parsed.decisions) return defaults();
+        const p = JSON.parse(raw);
+        const d = (p && p.decisions) ? p.decisions : {};
         return {
-          version: 1,
-          policyVersion: parsed.policyVersion || policyVersion,
-          ts: parsed.ts || 0,
+          version: Number(p?.version ?? 1),
+          policyVersion: Number(p?.policyVersion ?? policyVersion),
+          ts: Number(p?.ts ?? 0),
           decisions: {
-            analytics: !!parsed.decisions.analytics,
-            external:  !!parsed.decisions.external,
-            ads:       !!parsed.decisions.ads,
+            analytics: !!d.analytics,
+            external:  !!d.external,
+            ads:       !!d.ads,
+            adsPersonalized: !!d.adsPersonalized // default false if missing
           }
         };
-      } catch {
-        return defaults();
-      }
+      } catch { return defaults(); }
     }
 
     function write(state) {
       localStorage.setItem(storageKey, JSON.stringify(state));
-      // Event für Embeds & Skripte
+      // Kompatibel für alle Hörer
       window.dispatchEvent(new CustomEvent('consent:changed', { detail: state.decisions }));
+      window.dispatchEvent(new Event('consent:updated'));
     }
 
     function decided() {
@@ -134,152 +153,118 @@ const POLICY_VERSION = 1;
 
     function set(partial) {
       const s = read();
-      const updated = {
+      const next = {
         ...s,
+        version: 2,
         policyVersion,
         ts: Date.now(),
         decisions: { ...s.decisions, ...partial }
       };
-      write(updated);
-      return updated;
+      write(next);
+      return next;
     }
 
     function setAll(value) {
-      const updated = {
-        version: 1,
+      const v = !!value;
+      const next = {
+        version: 2,
         policyVersion,
         ts: Date.now(),
-        decisions: { analytics: !!value, external: !!value, ads: !!value }
+        decisions: { analytics: v, external: v, ads: v, adsPersonalized: v }
       };
-      write(updated);
-      return updated;
+      write(next);
+      return next;
     }
 
-    // ---------- expose global API ----------
+    // expose
     if (!window.consent) {
       window.consent = {
+        KEY: storageKey,
+        version: 2,
+        policyVersion,
         get: () => read().decisions,
         set,
         setAll,
         decided,
-        KEY: storageKey,
-        version: 1,
-        policyVersion
+        open: (mode) => window.consentUI?.open(mode)
       };
     }
 
-    // ---------- UI controls ----------
-    const banner = document.getElementById('consent-banner');
+    // ---------- UI ----------
+    const banner   = document.getElementById('consent-banner');
     const settings = document.getElementById('consent-settings');
 
-    const btnAcceptAll   = document.getElementById('btn-accept-all');
-    const btnRejectNon   = document.getElementById('btn-reject-non');
-    const btnOpenSettings= document.getElementById('btn-open-settings');
-    const btnBack        = document.getElementById('btn-back');
-    const btnSave        = document.getElementById('btn-save');
+    const btnAcceptAll    = document.getElementById('btn-accept-all');
+    const btnRejectNon    = document.getElementById('btn-reject-non');
+    const btnOpenSettings = document.getElementById('btn-open-settings');
+    const btnBack         = document.getElementById('btn-back');
+    const btnSave         = document.getElementById('btn-save');
 
     const cAnalytics = document.getElementById('c-analytics');
     const cExternal  = document.getElementById('c-external');
     const cAds       = document.getElementById('c-ads');
+    const cAdsP      = document.getElementById('c-ads-p');
 
-    function showRoot() {
-      root.classList.remove('hidden');
-      root.setAttribute('aria-hidden', 'false');
-      document.documentElement.style.overflow = 'hidden';
+    function showRoot() { root.classList.remove('hidden'); root.setAttribute('aria-hidden','false'); document.documentElement.style.overflow='hidden'; }
+    function hideRoot() { root.classList.add('hidden'); root.setAttribute('aria-hidden','true');  document.documentElement.style.overflow=''; }
+
+    function showBanner()   { banner?.classList.remove('hidden'); settings?.classList.add('hidden'); showRoot(); }
+    function showSettings() { settings?.classList.remove('hidden'); banner?.classList.add('hidden'); showRoot(); }
+
+    function syncPersonalizedDisabled(){
+      const adsOn = !!(cAds && cAds.checked);
+      if (cAdsP) {
+        cAdsP.disabled = !adsOn;
+        if (!adsOn) cAdsP.checked = false;
+      }
     }
-    function hideRoot() {
-      root.classList.add('hidden');
-      root.setAttribute('aria-hidden', 'true');
-      document.documentElement.style.overflow = '';
-    }
-    function showBanner() {
-      banner?.classList.remove('hidden');
-      settings?.classList.add('hidden');
-      showRoot();
-    }
-    function showSettings() {
-      settings?.classList.remove('hidden');
-      banner?.classList.add('hidden');
-      showRoot();
-    }
+
     function fillSettingsFromState() {
       const s = read();
       if (cAnalytics) cAnalytics.checked = !!s.decisions.analytics;
       if (cExternal)  cExternal.checked  = !!s.decisions.external;
       if (cAds)       cAds.checked       = !!s.decisions.ads;
+      if (cAdsP)      cAdsP.checked      = !!s.decisions.adsPersonalized && !!s.decisions.ads; // nur sinnvoll, wenn Ads an
+      syncPersonalizedDisabled();
     }
 
-    // Buttons
-    btnAcceptAll?.addEventListener('click', () => {
-      setAll(true);
-      hideRoot();
-    });
+    // interactions
+    cAds?.addEventListener('change', syncPersonalizedDisabled);
 
-    btnRejectNon?.addEventListener('click', () => {
-      // nur essential an, alles andere aus
-      set({ analytics: false, external: false, ads: false });
-      hideRoot();
-    });
-
-    btnOpenSettings?.addEventListener('click', () => {
-      fillSettingsFromState();
-      showSettings();
-    });
-
-    btnBack?.addEventListener('click', () => {
-      showBanner();
-    });
-
+    btnAcceptAll?.addEventListener('click', () => { setAll(true); hideRoot(); });
+    btnRejectNon?.addEventListener('click', () => { set({ analytics:false, external:false, ads:false, adsPersonalized:false }); hideRoot(); });
+    btnOpenSettings?.addEventListener('click', () => { fillSettingsFromState(); showSettings(); });
+    btnBack?.addEventListener('click', () => { showBanner(); });
     btnSave?.addEventListener('click', () => {
       set({
         analytics: !!(cAnalytics && cAnalytics.checked),
         external:  !!(cExternal  && cExternal.checked),
         ads:       !!(cAds       && cAds.checked),
+        adsPersonalized: !!(cAdsP && cAdsP.checked && cAds && cAds.checked)
       });
       hideRoot();
     });
 
-    // Klicken auf Backdrop -> schließen (nur Settings; Banner bleibt beim Erstbesuch sichtbar)
-    root.addEventListener('click', (e) => {
-      if (e.target === root) {
-        if (decided()) hideRoot();
-      }
-    });
+    // Backdrop click -> nur schließen, wenn schon entschieden
+    root.addEventListener('click', (e) => { if (e.target === root && decided()) hideRoot(); });
 
-    // Globale UI-API (auch für manuelles Reopen)
+    // Globale UI-API + Reopen
     window.consentUI = {
       open: (mode) => {
-        if (mode === 'settings') {
-          fillSettingsFromState();
-          showSettings();
-        } else {
-          // Standard: Banner, außer es gibt bereits eine Entscheidung -> dann settings
-          if (decided()) {
-            fillSettingsFromState();
-            showSettings();
-          } else {
-            showBanner();
-          }
-        }
+        if (mode === 'settings' || decided()) { fillSettingsFromState(); showSettings(); }
+        else { showBanner(); }
       },
       close: hideRoot
     };
-
-    // Bequemer Alias
     window.managePrivacy = () => window.consentUI.open('settings');
 
-    // Delegation: beliebiges Element mit [data-privacy-open] öffnet UI
+    // Delegation: jedes [data-privacy-open] öffnet UI
     document.addEventListener('click', (ev) => {
-      const trigger = (ev.target && (ev.target.closest?.('[data-privacy-open]')));
-      if (trigger) {
-        ev.preventDefault();
-        window.consentUI.open('settings');
-      }
+      const t = ev.target?.closest?.('[data-privacy-open]');
+      if (t) { ev.preventDefault(); window.consentUI.open('settings'); }
     });
 
-    // Beim ersten Besuch Banner zeigen, sonst versteckt bleiben
-    if (!decided()) {
-      showBanner();
-    }
+    // Erstbesuch?
+    if (!decided()) showBanner();
   })();
 </script>

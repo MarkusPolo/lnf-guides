@@ -1,12 +1,13 @@
 // src/lib/consent.ts
-export const CONSENT_KEY = 'lnf-consent';
-export const CONSENT_VERSION = 1;   // technische Banner-Version (UI/Logik)
-export const POLICY_VERSION = 1;    // rechtstextliche Version (Privacy-Änderungen => ++)
+export const CONSENT_KEY = 'lnf-consent-v1';
+export const CONSENT_VERSION = 2;   // technische Banner-Version (UI/Logik)
+export const POLICY_VERSION = 2;    // rechtstextliche Version (neuer Zweck: personalized ads)
 
 export type ConsentDecisions = {
   analytics: boolean;
   external: boolean;
   ads: boolean;
+  adsPersonalized: boolean;
 };
 
 export type ConsentRecord = {
@@ -20,7 +21,7 @@ const defaults: ConsentRecord = {
   version: CONSENT_VERSION,
   policyVersion: POLICY_VERSION,
   ts: 0,
-  decisions: { analytics: false, external: false, ads: false },
+  decisions: { analytics: false, external: false, ads: false, adsPersonalized: false },
 };
 
 export function read(): ConsentRecord {
@@ -28,10 +29,17 @@ export function read(): ConsentRecord {
     const raw = localStorage.getItem(CONSENT_KEY);
     if (!raw) return { ...defaults };
     const parsed = JSON.parse(raw);
+    const d = parsed?.decisions || {};
     return {
-      ...defaults,
-      ...parsed,
-      decisions: { ...defaults.decisions, ...(parsed?.decisions || {}) },
+      version: parsed?.version ?? CONSENT_VERSION,
+      policyVersion: parsed?.policyVersion ?? POLICY_VERSION,
+      ts: parsed?.ts ?? 0,
+      decisions: {
+        analytics: !!d.analytics,
+        external: !!d.external,
+        ads: !!d.ads,
+        adsPersonalized: !!d.adsPersonalized
+      },
     };
   } catch {
     return { ...defaults };
@@ -40,19 +48,19 @@ export function read(): ConsentRecord {
 
 export function write(next: ConsentRecord) {
   localStorage.setItem(CONSENT_KEY, JSON.stringify(next));
-  window.dispatchEvent(new CustomEvent('consent:changed', { detail: next }));
+  const detail = next.decisions;
+  window.dispatchEvent(new CustomEvent('consent:changed', { detail }));
+  window.dispatchEvent(new Event('consent:updated'));
 }
 
 export function decideAll(value: boolean) {
-  const prev = read();
+  const v = !!value;
   write({
-    ...prev,
     version: CONSENT_VERSION,
     policyVersion: POLICY_VERSION,
     ts: Date.now(),
-    decisions: { analytics: value, external: value, ads: value },
+    decisions: { analytics: v, external: v, ads: v, adsPersonalized: v },
   });
-  window.dispatchEvent(new Event('consent:updated'));
 }
 
 export function savePartial(partial: Partial<ConsentDecisions>) {
@@ -64,11 +72,11 @@ export function savePartial(partial: Partial<ConsentDecisions>) {
     ts: Date.now(),
     decisions: { ...prev.decisions, ...partial },
   });
-  window.dispatchEvent(new Event('consent:updated'));
 }
 
 export function decided(): boolean {
-  return read().ts > 0;
+  const r = read();
+  return r.ts > 0 && r.policyVersion === POLICY_VERSION;
 }
 
 export function needsRenewal(): boolean {
@@ -80,14 +88,13 @@ export function openManager() {
   window.dispatchEvent(new Event('consent:open'));
 }
 
-// Für bequemen Zugriff im Browser:
 export function attachToWindow() {
   // @ts-expect-error
   window.consent = {
     KEY: CONSENT_KEY,
     version: CONSENT_VERSION,
     policyVersion: POLICY_VERSION,
-    get: read,
+    get: () => read().decisions,
     setAll: decideAll,
     set: savePartial,
     decided,
