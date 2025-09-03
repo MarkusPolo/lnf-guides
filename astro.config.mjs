@@ -4,7 +4,7 @@ import mdx from '@astrojs/mdx';
 import tailwindcss from '@tailwindcss/vite';
 
 // Domain später anpassen
-const SITE = 'https://lnf-guides.com';
+const SITE = 'https://lnfguides.com';
 
 // Mini-Integration: kopiert sitemap-index.xml -> sitemap.xml nach dem Build
 const copySitemap = () => ({

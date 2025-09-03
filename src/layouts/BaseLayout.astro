@@ -11,7 +11,7 @@ const {
   category,
 } = Astro.props as any;
 
-const site = Astro.site?.origin ?? "https://lnf-guides.com";
+const site = Astro.site?.origin ?? "https://lnfguides.com";
 const url = canonical ?? new URL(Astro.url.pathname, site);
 const siteUrl = String(Astro.site ?? site);
 
@@ -23,7 +23,6 @@ const ogFallbackByCategory: Record<string, string> = {
 const finalOg = ogImage || ogFallbackByCategory[category] || "/images/og/default.png";
 
 // IDs / Domains
-const PLAUSIBLE_DOMAIN = "lnf-guides.com";
 const FC_PUBLISHER_ID = "pub-6618488631609364";
 ---
 
@@ -161,33 +160,39 @@ const FC_PUBLISHER_ID = "pub-6618488631609364";
       })();
     </script>
 
-    <!-- Plausible: lädt nur, wenn lnfConsent.allowed('analytics') -->
-    <script id="plausible-loader" data-domain={PLAUSIBLE_DOMAIN}>
+    <!-- Vercel Web Analytics: lädt nur bei Opt-in (lnfConsent.analytics) -->
+    <script id="vercel-analytics-loader">
       (function(){
         var loaded = false;
+
+        // optional: Queue für Custom Events (kompatibel zur Vercel Doku)
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+
         function load(){
           if (loaded) return;
           loaded = true;
-          var d = document.currentScript?.getAttribute('data-domain') || '';
-          if (!d) return;
           var s = document.createElement('script');
           s.defer = true;
-          s.src = 'https://plausible.io/js/script.js';
-          s.setAttribute('data-domain', d);
-          s.id = 'plausible-script';
+          s.src = '/_vercel/insights/script.js'; // Standard-Endpunkt von Vercel WA
+          s.id = 'vercel-analytics-script';
           document.head.appendChild(s);
         }
+
         function allowed(){
           try { return !!(window.lnfConsent && window.lnfConsent.allowed('analytics')); }
           catch(e){ return false; }
         }
+
         if (allowed()) load();
-        // auf Änderungen reagieren
-        try{
+
+        // auf nachträgliche Einwilligung reagieren
+        try {
           window.lnfConsent && window.lnfConsent.on(function(d){ if (d && d.analytics) load(); });
-        }catch(e){}
+        } catch(e){}
       })();
     </script>
+
+    
   </head>
   <body class="font-sans bg-bg text-text">
     <a href="#content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:bg-surface focus:px-3 focus:py-2 focus:rounded">Skip to content</a>
