@@ -1,0 +1,163 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+const title = "Privacy Policy";
+const description = "Information on data processing on this website, consent, analytics, ads, and external embeds.";
+const canonical = new URL('/privacy/', Astro.site!);
+---
+
+<BaseLayout {title} {description} {canonical}>
+  <div class="mx-auto max-w-3xl px-4 py-12 prose prose-invert max-w-none">
+    <h1>Privacy Policy</h1>
+
+    <p><strong>Last updated:</strong> {new Date().toISOString().slice(0,10)}</p>
+
+    <h2>1. Controller</h2>
+    <p>
+      [[Name/Company]]<br/>
+      [[Street, ZIP City, Country]]<br/>
+      Email: <a href="mailto:[[contact@example.com]]">[[contact@example.com]]</a>
+    </p>
+
+    <h2>2. General information on data processing</h2>
+    <p>This is a static website without its own backend. We process personal data only as necessary to provide the site or after you have given consent (Art. 6(1)(a) GDPR). Non-essential technologies (analytics, advertising, external embeds) are only activated after consent.</p>
+
+    <h3>2.1 Consent management (CMP)</h3>
+    <p>
+      We use a consent management platform (CMP) to load non-essential technologies only after you consent.
+      You can change your selection at any time via the <em>“Privacy settings”</em> button or the page <a href="/privacy/">/privacy/</a>.
+    </p>
+    <ul>
+      <li><strong>Legal basis:</strong> Art. 6(1)(a) GDPR (consent)</li>
+      <li><strong>Granularity:</strong> Analytics, External embeds, Ads, Personalized ads</li>
+      <li><strong>Retention:</strong> Consents are stored locally and renewed after 6 months at the latest (re-consent).</li>
+    </ul>
+
+    <h2>3. Hosting & delivery</h2>
+    <p>The website is hosted and delivered by [[Host/CDN, e.g., Vercel/Netlify/Cloudflare]]. Server-side logs (e.g., IP address, timestamp, user agent) may be processed to provide the site and ensure security.</p>
+    <ul>
+      <li><strong>Legal basis:</strong> Art. 6(1)(f) GDPR (legitimate interest in secure and efficient delivery)</li>
+      <li><strong>Recipient:</strong> [[Host/CDN]] (processor). A data processing agreement (DPA) is in place.</li>
+      <li><strong>Retention:</strong> according to the host’s policy [[e.g., 7–30 days]]</li>
+    </ul>
+
+    <h2>4. Web analytics (Plausible)</h2>
+    <p>We use Plausible Analytics. The script is only loaded if you allow <em>Analytics</em>. Plausible uses no cookies and collects aggregated usage data (page views, referrers, coarse browser/device data). IP addresses are shortened/hashed.</p>
+    <ul>
+      <li><strong>Service:</strong> Plausible Insights OÜ, Västriku tn 2, 50403 Tartu, Estonia</li>
+      <li><strong>Legal basis:</strong> Art. 6(1)(a) GDPR (consent)</li>
+      <li><strong>Transfer:</strong> EU/EEA (according to the provider). A DPA with Plausible is in place.</li>
+      <li><strong>Opt-out/withdrawal:</strong> at any time via <em>Privacy settings</em> or /privacy</li>
+    </ul>
+
+    <h2>5. Advertising (Google AdSense)</h2>
+    <p>Ads are loaded only if you allow <em>Ads</em>. Personalization is used only if you additionally allow <em>Personalized ads</em>. Without personalization, non-personalized ads (NPA) are requested.</p>
+    <ul>
+      <li><strong>Service:</strong> Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Ireland</li>
+      <li><strong>Legal basis:</strong> Art. 6(1)(a) GDPR (consent); German TTDSG § 25(1) where applicable</li>
+      <li><strong>Technology:</strong> IAB TCF 2.2 + Google Consent Mode v2 (ad_storage, ad_user_data, ad_personalization)</li>
+      <li><strong>Third-country transfer:</strong> possible to the USA; legal basis: EU-US Data Privacy Framework and/or SCCs</li>
+      <li><strong>Withdrawal:</strong> at any time via <em>Privacy settings</em> or /privacy</li>
+    </ul>
+
+    <h2>6. External embeds</h2>
+
+    <h3>6.1 YouTube (nocookie)</h3>
+    <p>Videos load only after you consent to <em>External embeds</em>. We use the domain <code>youtube-nocookie.com</code>, which transmits data to YouTube only when playing the video.</p>
+    <ul>
+      <li><strong>Service:</strong> Google Ireland Limited (YouTube)</li>
+      <li><strong>Legal basis:</strong> Art. 6(1)(a) GDPR (consent)</li>
+      <li><strong>Third-country transfer:</strong> possible to the USA; see Google section</li>
+    </ul>
+
+    <h3>6.2 Giscus (GitHub Discussions)</h3>
+    <p>Comments are embedded via Giscus and load only after you consent to <em>External embeds</em>. When interacting, data may be transmitted to GitHub.</p>
+    <ul>
+      <li><strong>Service:</strong> GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA</li>
+      <li><strong>Legal basis:</strong> Art. 6(1)(a) GDPR (consent)</li>
+      <li><strong>Third-country transfer:</strong> to the USA; appropriate safeguards (DPF/SCC) according to the provider</li>
+    </ul>
+
+    <h2>7. Cookies and similar technologies</h2>
+    <p>Essential technologies (required for operation) are always active. Non-essential technologies (analytics, ads, external embeds) are activated only with your consent. You can change your choices at any time.</p>
+
+    <h2>8. Your rights</h2>
+    <ul>
+      <li>Access (Art. 15 GDPR)</li>
+      <li>Rectification (Art. 16 GDPR)</li>
+      <li>Erasure (Art. 17 GDPR)</li>
+      <li>Restriction (Art. 18 GDPR)</li>
+      <li>Data portability (Art. 20 GDPR)</li>
+      <li>Objection (Art. 21 GDPR, where applicable)</li>
+      <li>Withdrawal of consent (Art. 7(3) GDPR)</li>
+      <li>Complaint with a supervisory authority (Art. 77 GDPR)</li>
+    </ul>
+
+    <h2>9. Manage your choices</h2>
+    <section class="card p-4 md:p-5 mb-6 not-prose">
+      <h3 class="text-xl font-semibold mb-2">Current status & settings</h3>
+      <ul class="space-y-2 text-sm">
+        <li class="flex justify-between"><span>Analytics</span> <strong id="st-analytics">–</strong></li>
+        <li class="flex justify-between"><span>Ads</span> <strong id="st-ads">–</strong></li>
+        <li class="flex justify-between"><span>Personalized ads</span> <strong id="st-ads-p">–</strong></li>
+        <li class="flex justify-between"><span>External embeds (YouTube, Giscus)</span> <strong id="st-ext">–</strong></li>
+      </ul>
+      <div class="mt-4 flex gap-3 items-center">
+        <button class="btn btn-primary" data-privacy-open>Open privacy settings</button>
+        <label class="ml-2 inline-flex items-center gap-2 text-sm">
+          <input id="ext-toggle" type="checkbox" />
+          Always allow external embeds
+        </label>
+      </div>
+    </section>
+  </div>
+
+  <script is:inline>
+    (function(){
+      function yn(v){ return v ? 'Allowed' : 'Blocked'; }
+      function getExt(){ try { return !!JSON.parse(localStorage.getItem('lnf-external-embeds') || 'false'); } catch { return false; } }
+
+      function getState(){
+        var d = (window.lnfConsent && window.lnfConsent.get && window.lnfConsent.get()) || {};
+        return {
+          analytics: !!d.analytics,
+          ads: !!d.ads,
+          adsP: !!d.adsPersonalized,
+          ext: getExt()
+        };
+      }
+
+      function paint(){
+        var s = getState();
+        (document.getElementById('st-analytics')||{}).textContent = yn(s.analytics);
+        (document.getElementById('st-ads')||{}).textContent = yn(s.ads);
+        (document.getElementById('st-ads-p')||{}).textContent = yn(s.adsP);
+        (document.getElementById('st-ext')||{}).textContent = yn(s.ext);
+        var t = document.getElementById('ext-toggle'); if (t) t.checked = s.ext;
+      }
+
+      function onAnyChange(){ paint(); }
+
+      // Init + Änderungen (Bridge + kompatible Events)
+      paint();
+      try { window.lnfConsent && window.lnfConsent.on(onAnyChange); } catch(e){}
+      window.addEventListener('consent:updated', onAnyChange);
+      window.addEventListener('consent:changed', onAnyChange);
+
+      // Toggle for External embeds
+      document.getElementById('ext-toggle')?.addEventListener('change', function(e){
+        var v = !!e.target.checked;
+        if (window.lnfExternal && typeof window.lnfExternal.set==='function') {
+          window.lnfExternal.set(v); // sets LS + fires events as in layout
+        } else {
+          try { localStorage.setItem('lnf-external-embeds', JSON.stringify(v)); } catch {}
+          // Fallback: fire events
+          var d = (window.lnfConsent && window.lnfConsent.get && window.lnfConsent.get()) || {};
+          var detail = { analytics:!!d.analytics, ads:!!d.ads, adsPersonalized:!!d.adsPersonalized, external:v };
+          window.dispatchEvent(new CustomEvent('consent:changed', { detail }));
+          window.dispatchEvent(new Event('consent:updated'));
+        }
+        paint();
+      });
+    })();
+  </script>
+</BaseLayout>

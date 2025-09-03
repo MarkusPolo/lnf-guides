@@ -83,7 +83,7 @@ const src = videoId ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0` 
     const frameHost = root.querySelector('.relative.w-full');
 
     // ---- Consent-Utils (wie in Comments: LS-Fallback + beide Keys) ----
-    const LS_KEYS = ['lnf-consent-v1', 'lnf-consent'];
+    const LS_KEYS = ['lnf-consent-v1', 'lnf-consent', 'lnf-consent-1'];
 
     function readLS() {
       for (const k of LS_KEYS) {

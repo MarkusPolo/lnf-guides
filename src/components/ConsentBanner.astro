@@ -101,6 +101,7 @@ const POLICY_VERSION = 2;
   const PRIMARY_KEY = root.getAttribute('data-storage-key') || 'lnf-consent-1';
   const ALT_KEYS = ['lnf-consent-v1','lnf-consent'];
   const policyVersion = Number(root.getAttribute('data-policy-version') || '2');
+  const CONSENT_MAX_AGE_DAYS = 180; // 6 Monate (falls du 12 willst: 365)
 
   // ---------- Utils ----------
   const defaults = () => ({
@@ -141,6 +142,14 @@ const POLICY_VERSION = 2;
     };
   }
 
+  function isExpired(ts){
+   if (!ts) return true;
+   try {
+     const ageDays = (Date.now() - Number(ts)) / (1000*60*60*24);
+     return ageDays > CONSENT_MAX_AGE_DAYS;
+   } catch { return true; }
+ }
+
   function applyConsentMode(dec){
     try {
       gtag('consent', 'update', {
@@ -167,7 +176,7 @@ const POLICY_VERSION = 2;
 
   function decided(){
     const s = normalize(readAny());
-    return !!s.ts && s.policyVersion === policyVersion;
+    return !!s.ts && s.policyVersion === policyVersion && !isExpired(s.ts);
   }
 
   function set(partial){
@@ -266,9 +275,16 @@ const POLICY_VERSION = 2;
   // ---------- Sofort-Sync beim Seitenstart ----------
   (function initialSync(){
     const s = normalize(readAny());
+    // Wenn abgelaufen: reset auf denied, Banner zeigen
+    if (!decided()) {
+      applyConsentMode({ analytics:false, ads:false, adsPersonalized:false });
+      dispatch({ analytics:false, ads:false, adsPersonalized:false, external:false });
+      showBanner();
+      return;
+    }
+    // sonst gespeicherten Stand spiegeln
     applyConsentMode(s.decisions); // setzt __lnfConsentState via gtag-Hook
-    dispatch(s.decisions);
-    if (!decided()) showBanner();
-  })();
+    dispatch({ ...s.decisions, external: !!JSON.parse(localStorage.getItem('lnf-external-embeds')||'false') });
+    })();
 })();
 </script>

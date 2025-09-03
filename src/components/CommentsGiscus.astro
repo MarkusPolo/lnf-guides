@@ -40,7 +40,7 @@ const cfg = { repo, repoId, category, categoryId, mapping, lang, theme };
 <script define:vars={{ hostId, cfg }}>
   // @ts-nocheck
   (function () {
-    const LS_KEYS = ["lnf-consent-v1", "lnf-consent"]; // lese beide zur Sicherheit
+    const LS_KEYS = ["lnf-consent-1", "lnf-consent-v1", "lnf-consent"]; // inkl. neuer Key
     let mounted = false;
 
     function readLS() {

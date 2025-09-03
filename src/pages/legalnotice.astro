@@ -1,0 +1,45 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+const title = "Legal Notice";
+const description = "Contact details and mandatory information according to German law (Impressum).";
+const canonical = new URL('/en/impressum/', Astro.site!);
+---
+
+<BaseLayout {title} {description} {canonical}>
+  <div class="mx-auto max-w-3xl px-4 py-12 prose prose-invert">
+    <h1>Legal Notice</h1>
+
+    <h2>Information according to § 5 German Telemedia Act (TMG)</h2>
+    <p>
+      Marius Morgenstern<br/>
+      Malterstr. 9, 01159 Dresden, Germany<br/>
+      Email: <a href="mailto:business.tryonai@gmail.com">business.tryonai@gmail.com</a><br/>
+    </p>
+
+    <h2>Represented by</h2>
+    <p>Marius Morgenstern, see details above</p>
+
+    <h2>Editorial responsibility</h2>
+    <p>
+      Marius Morgenstern, see details above
+    </p>
+
+    <h2>Disclaimer</h2>
+    <p>
+      Despite careful control of content, we assume no liability for the content of external links.
+      The operators of the linked pages are solely responsible for their content.
+    </p>
+
+    <h2>EU dispute resolution</h2>
+    <p>
+      The European Commission provides a platform for online dispute resolution (ODR):<br/>
+      <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener">https://ec.europa.eu/consumers/odr</a>.
+    </p>
+
+    <h2>Consumer dispute resolution</h2>
+    <p>
+      We are not willing or obliged to participate in dispute resolution proceedings before a
+      consumer arbitration board.
+    </p>
+  </div>
+</BaseLayout>

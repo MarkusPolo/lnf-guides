@@ -1,0 +1,34 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+const title = "Impressum";
+const description = "Anbieterkennzeichnung gemäß § 5 TMG und § 18 MStV.";
+const canonical = new URL('/impressum/', Astro.site!);
+---
+
+<BaseLayout {title} {description} {canonical}>
+  <div class="mx-auto max-w-3xl px-4 py-12 prose prose-invert">
+    <h1>Impressum</h1>
+
+    <h2>Diensteanbieter</h2>
+    <p>
+      Marius Morgenstern<br/>
+      Malterstr. 9, 01159 Dresden, Deutschland
+    </p>
+
+    <h2>Kontakt</h2>
+    <p>
+      E-Mail: <a href="mailto:business.tryonai@gmail.com">business.tryonai@gmail.com</a><br/>
+    </p>
+
+    <h2>Vertretungsberechtigte</h2>
+    <p>Gleich wie Dienstanbieter</p>
+
+    <h2>Umsatzsteuer-ID</h2>
+    <p>DE368942433</p>
+
+    <h2>Verantwortlich i.S.d. § 18 Abs. 2 MStV</h2>
+    <p>
+      Gleich wie Dienstanbieter
+    </p>
+  </div>
+</BaseLayout>

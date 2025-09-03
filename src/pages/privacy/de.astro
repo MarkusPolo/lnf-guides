@@ -1,0 +1,163 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+const title = "Datenschutzerklärung";
+const description = "Informationen zur Verarbeitung personenbezogener Daten auf dieser Website, zu Einwilligungen, Analytics, Werbung und externen Einbindungen.";
+const canonical = new URL('/privacy/', Astro.site!);
+---
+
+<BaseLayout {title} {description} {canonical}>
+  <div class="mx-auto max-w-3xl px-4 py-12 prose prose-invert max-w-none">
+    <h1>Datenschutzerklärung</h1>
+
+    <p><strong>Stand:</strong> {new Date().toISOString().slice(0,10)}</p>
+
+    <h2>1. Verantwortlicher</h2>
+    <p>
+      [[Name/Firma]]<br/>
+      [[Straße, PLZ Ort, Land]]<br/>
+      E-Mail: <a href="mailto:[[kontakt@example.com]]">[[kontakt@example.com]]</a>
+    </p>
+
+    <h2>2. Allgemeines zur Datenverarbeitung</h2>
+    <p>Diese Website ist eine statische Website ohne eigenes Backend. Personenbezogene Daten werden nur verarbeitet, soweit dies zur Bereitstellung der Website erforderlich ist oder nachdem du eingewilligt hast (Art. 6 Abs.1 lit. a DSGVO). Nicht-essentielle Technologien (Analytics, Werbung, externe Einbindungen) werden erst nach Einwilligung aktiviert.</p>
+
+    <h3>2.1 Einwilligungs-Management (CMP)</h3>
+    <p>
+      Wir verwenden ein Einwilligungs-Management (Consent Management Platform, CMP), um nicht-essentielle Technologien erst nach deiner Einwilligung zu laden.
+      Du kannst deine Auswahl jederzeit ändern über den Button <em>„Datenschutzeinstellungen“</em> oder die Seite <a href="/privacy/">/privacy/</a>.
+    </p>
+    <ul>
+      <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs.1 lit. a DSGVO</li>
+      <li><strong>Granularität:</strong> Analytics, Externe Einbindungen, Werbung, Personalisierte Werbung</li>
+      <li><strong>Speicherfrist:</strong> Einwilligungen werden lokal gespeichert und nach spätestens 6 Monaten erneut abgefragt (Re-Consent).</li>
+    </ul>
+
+    <h2>3. Hosting & Auslieferung</h2>
+    <p>Die Website wird bei [[Hoster/CDN, z.&nbsp;B. Vercel/Netlify/Cloudflare]] gehostet und ausgeliefert. Dabei werden serverseitige Logdaten (z. B. IP-Adresse, Zeitpunkt, User-Agent) verarbeitet, um die Auslieferung und Sicherheit zu gewährleisten.</p>
+    <ul>
+      <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs.1 lit. f DSGVO (berechtigtes Interesse an sicherer und effizienter Bereitstellung)</li>
+      <li><strong>Empfänger:</strong> [[Hoster/CDN]] (Auftragsverarbeiter). Ein entsprechender Auftragsverarbeitungsvertrag (AVV/DPA) wurde abgeschlossen.</li>
+      <li><strong>Speicherdauer:</strong> gemäß den Richtlinien des Hosters [[z. B. 7–30 Tage]]</li>
+    </ul>
+
+    <h2>4. Webanalyse (Plausible)</h2>
+    <p>Wir verwenden Plausible Analytics. Das Skript wird nur geladen, wenn du <em>Analytics</em> zulässt. Plausible arbeitet ohne Cookies und erhebt aggregierte Nutzungsdaten (Seitenaufrufe, Referrer, Browser/Endgerät in grober Form). IP-Adressen werden gekürzt/Hash-verarbeitet.</p>
+    <ul>
+      <li><strong>Dienst:</strong> Plausible Insights OÜ, Västriku tn 2, 50403 Tartu, Estland</li>
+      <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs.1 lit. a DSGVO (Einwilligung)</li>
+      <li><strong>Übermittlung:</strong> EU/EWR (nach Anbieterangaben). Es besteht ein AVV/DPA mit Plausible.</li>
+      <li><strong>Opt-out/Widerruf:</strong> jederzeit über <em>Datenschutzeinstellungen</em> bzw. /privacy</li>
+    </ul>
+
+    <h2>5. Werbung (Google AdSense)</h2>
+    <p>Werbeanzeigen werden nur geladen, wenn du <em>Ads</em> zulässt. Die Personalisierung erfolgt nur, wenn du zusätzlich <em>Personalized ads</em> zulässt. Ohne Personalisierung werden nicht-personalisierte Anzeigen (NPA) angefragt.</p>
+    <ul>
+      <li><strong>Dienst:</strong> Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland</li>
+      <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs.1 lit. a DSGVO (Einwilligung); TTDSG § 25 Abs.1</li>
+      <li><strong>Technik:</strong> IAB TCF 2.2 + Google Consent Mode v2 (ad_storage, ad_user_data, ad_personalization)</li>
+      <li><strong>Drittlandtransfer:</strong> USA möglich. Rechtsgrundlage: EU-US Data Privacy Framework bzw. Standardvertragsklauseln (SCCs) von Google</li>
+      <li><strong>Widerruf:</strong> jederzeit über <em>Datenschutzeinstellungen</em> bzw. /privacy</li>
+    </ul>
+
+    <h2>6. Externe Einbindungen</h2>
+
+    <h3>6.1 YouTube (nocookie)</h3>
+    <p>Videos werden erst nach deiner Zustimmung zu <em>External embeds</em> geladen. Wir verwenden die Domain <code>youtube-nocookie.com</code>, die erst beim Abspielen Daten an YouTube übermittelt.</p>
+    <ul>
+      <li><strong>Dienst:</strong> Google Ireland Limited (YouTube)</li>
+      <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs.1 lit. a DSGVO (Einwilligung)</li>
+      <li><strong>Drittlandtransfer:</strong> USA möglich; siehe Abschnitt Google</li>
+    </ul>
+
+    <h3>6.2 Giscus (GitHub Discussions)</h3>
+    <p>Kommentare werden über Giscus eingebunden und erst nach deiner Zustimmung zu <em>External embeds</em> geladen. Bei Interaktion können Daten an GitHub übermittelt werden.</p>
+    <ul>
+      <li><strong>Dienst:</strong> GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA</li>
+      <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs.1 lit. a DSGVO (Einwilligung)</li>
+      <li><strong>Drittlandtransfer:</strong> USA; geeignete Garantien (DPF/SCC) gem. Angaben des Anbieters</li>
+    </ul>
+
+    <h2>7. Cookies und ähnliche Technologien</h2>
+    <p>Essentielle Technologien (notwendig für den Betrieb) sind stets aktiv. Nicht-essentielle Technologien (Analytics, Werbung, externe Einbindungen) werden nur mit Einwilligung aktiviert. Du kannst deine Auswahl jederzeit ändern.</p>
+
+    <h2>8. Deine Rechte</h2>
+    <ul>
+      <li>Auskunft (Art. 15 DSGVO)</li>
+      <li>Berichtigung (Art. 16 DSGVO)</li>
+      <li>Löschung (Art. 17 DSGVO)</li>
+      <li>Einschränkung (Art. 18 DSGVO)</li>
+      <li>Datenübertragbarkeit (Art. 20 DSGVO)</li>
+      <li>Widerspruch (Art. 21 DSGVO – soweit anwendbar)</li>
+      <li>Widerruf erteilter Einwilligungen (Art. 7 Abs.3 DSGVO)</li>
+      <li>Beschwerde bei einer Aufsichtsbehörde (Art. 77 DSGVO), z. B. bei der für dich zuständigen Landesdatenschutzbehörde.</li>
+    </ul>
+
+    <h2>9. Verwaltung deiner Einwilligungen</h2>
+    <section class="card p-4 md:p-5 mb-6 not-prose">
+      <h3 class="text-xl font-semibold mb-2">Aktueller Status &amp; Einstellungen</h3>
+      <ul class="space-y-2 text-sm">
+        <li class="flex justify-between"><span>Analytics</span> <strong id="st-analytics">–</strong></li>
+        <li class="flex justify-between"><span>Ads</span> <strong id="st-ads">–</strong></li>
+        <li class="flex justify-between"><span>Personalisierte Werbung</span> <strong id="st-ads-p">–</strong></li>
+        <li class="flex justify-between"><span>Externe Einbindungen (YouTube, Giscus)</span> <strong id="st-ext">–</strong></li>
+      </ul>
+      <div class="mt-4 flex gap-3 items-center">
+        <button class="btn btn-primary" data-privacy-open>Datenschutzeinstellungen öffnen</button>
+        <label class="ml-2 inline-flex items-center gap-2 text-sm">
+          <input id="ext-toggle" type="checkbox" />
+          Externe Einbindungen immer erlauben
+        </label>
+      </div>
+    </section>
+  </div>
+
+  <script is:inline>
+    (function(){
+      function yn(v){ return v ? 'Erlaubt' : 'Blockiert'; }
+      function getExt(){ try { return !!JSON.parse(localStorage.getItem('lnf-external-embeds') || 'false'); } catch { return false; } }
+
+      function getState(){
+        var d = (window.lnfConsent && window.lnfConsent.get && window.lnfConsent.get()) || {};
+        return {
+          analytics: !!d.analytics,
+          ads: !!d.ads,
+          adsP: !!d.adsPersonalized,
+          ext: getExt()
+        };
+      }
+
+      function paint(){
+        var s = getState();
+        (document.getElementById('st-analytics')||{}).textContent = yn(s.analytics);
+        (document.getElementById('st-ads')||{}).textContent = yn(s.ads);
+        (document.getElementById('st-ads-p')||{}).textContent = yn(s.adsP);
+        (document.getElementById('st-ext')||{}).textContent = yn(s.ext);
+        var t = document.getElementById('ext-toggle'); if (t) t.checked = s.ext;
+      }
+
+      function onAnyChange(){ paint(); }
+
+      // Init + Änderungen (Bridge + kompatible Events)
+      paint();
+      try { window.lnfConsent && window.lnfConsent.on(onAnyChange); } catch(e){}
+      window.addEventListener('consent:updated', onAnyChange);
+      window.addEventListener('consent:changed', onAnyChange);
+
+      // Toggle für External embeds
+      document.getElementById('ext-toggle')?.addEventListener('change', function(e){
+        var v = !!e.target.checked;
+        if (window.lnfExternal && typeof window.lnfExternal.set==='function') {
+          window.lnfExternal.set(v); // setzt LS + feuert Events wie im Layout
+        } else {
+          try { localStorage.setItem('lnf-external-embeds', JSON.stringify(v)); } catch {}
+          // Notfall: Events selbst feuern
+          var d = (window.lnfConsent && window.lnfConsent.get && window.lnfConsent.get()) || {};
+          var detail = { analytics:!!d.analytics, ads:!!d.ads, adsPersonalized:!!d.adsPersonalized, external:v };
+          window.dispatchEvent(new CustomEvent('consent:changed', { detail }));
+          window.dispatchEvent(new Event('consent:updated'));
+        }
+        paint();
+      });
+    })();
+  </script>
+</BaseLayout>

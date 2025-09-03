@@ -1,0 +1,15 @@
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains; preload" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' plausible.io pagead2.googlesyndication.com fundingchoicesmessages.google.com giscus.app youtube-nocookie.com; connect-src 'self' plausible.io; img-src 'self' data: i.ytimg.com; style-src 'self' 'unsafe-inline'; frame-src youtube-nocookie.com googleads.g.doubleclick.net fundingchoicesmessages.google.com giscus.app; font-src 'self' data:;" }
+      ]
+    }
+  ]
+}

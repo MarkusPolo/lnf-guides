@@ -1,5 +1,6 @@
 // src/lib/consent.ts
-export const CONSENT_KEY = 'lnf-consent-v1';
+// src/lib/consent.ts
+export const CONSENT_KEY = 'lnf-consent-1'; // statt 'lnf-consent-v1'
 export const CONSENT_VERSION = 2;   // technische Banner-Version (UI/Logik)
 export const POLICY_VERSION = 2;    // rechtstextliche Version (neuer Zweck: personalized ads)
 
