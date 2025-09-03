@@ -1,45 +1,55 @@
 ---
 import "../styles/global.css";
-import ConsentBanner from "../components/ConsentBanner.astro";
-import DebugConsent from "../components/DebugConsent.astro";
+import ConsentBanner from "../components/ConsentBanner.astro"; // <— Banner wirklich mounten!
 
-const { title, description, canonical, ogImage, type = 'website', category } = Astro.props as any;
+const {
+  title,
+  description,
+  canonical,
+  ogImage,
+  type = "website",
+  category,
+} = Astro.props as any;
 
-const site = Astro.site?.origin ?? 'https://lnf-guides.com';
+const site = Astro.site?.origin ?? "https://lnf-guides.com";
 const url = canonical ?? new URL(Astro.url.pathname, site);
 const siteUrl = String(Astro.site ?? site);
 
-const ogFallbackByCategory: Record<string,string> = {
-  dragons: '/images/og/dragons.png',
-  beginners: '/images/og/beginners.png',
+// OG-Fallback pro Kategorie
+const ogFallbackByCategory: Record<string, string> = {
+  dragons: "/images/og/dragons.png",
+  beginners: "/images/og/beginners.png",
 };
-const finalOg = ogImage || ogFallbackByCategory[category] || '/images/og/default.png';
-const PLAUSIBLE_DOMAIN = 'lnf-guides.com';
+const finalOg = ogImage || ogFallbackByCategory[category] || "/images/og/default.png";
+
+// Deine IDs / Domains
+const PLAUSIBLE_DOMAIN = "lnf-guides.com";
+// Google Funding Choices Publisher-ID (Platzhalter!)
+const FC_PUBLISHER_ID = "pub-XXXXXXXXXXXXXXX";
 ---
 
 <html lang="en" class="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+    <!-- exakt eine Canonical-URL -->
     <link rel="canonical" href={String(url)} />
 
-    <title>{title}</title>
-    <meta name="description" content={description} />
-    <link rel="canonical" href={String(canonical)} />
+    <title>{title ?? "LNF Guides"}</title>
+    <meta name="description" content={description ?? "Guides & News"} />
 
     <!-- OG / Twitter -->
     <meta property="og:type" content={type} />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={String(canonical)} />
+    <meta property="og:title" content={title ?? "LNF Guides"} />
+    <meta property="og:description" content={description ?? "Guides & News"} />
+    <meta property="og:url" content={String(url)} />
     <meta property="og:image" content={finalOg} />
     <meta property="og:site_name" content="LNF Guides" />
-
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
+    <meta name="twitter:title" content={title ?? "LNF Guides"} />
+    <meta name="twitter:description" content={description ?? "Guides & News"} />
     <meta name="twitter:image" content={finalOg} />
-
     <link rel="icon" href="/images/logo.svg" type="image/svg+xml" />
 
     <!-- JSON-LD: WebSite -->
@@ -47,13 +57,13 @@ const PLAUSIBLE_DOMAIN = 'lnf-guides.com';
       {JSON.stringify({
         "@context": "https://schema.org",
         "@type": "WebSite",
-        "url": siteUrl,
-        "name": "LNF Guides",
-        "potentialAction": {
+        url: siteUrl,
+        name: "LNF Guides",
+        potentialAction: {
           "@type": "SearchAction",
-          "target": `${siteUrl}/search?q={query}`,
-          "query-input": "required name=query"
-        }
+          target: `${siteUrl}/search?q={query}`,
+          "query-input": "required name=query",
+        },
       })}
     </script>
 
@@ -62,18 +72,105 @@ const PLAUSIBLE_DOMAIN = 'lnf-guides.com';
       {JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Organization",
-        "name": "LNF Guides",
-        "url": siteUrl,
-        "logo": `${siteUrl}/images/logo.svg`,
-        "sameAs": ["https://github.com/lnf-guides"]
+        name: "LNF Guides",
+        url: siteUrl,
+        logo: `${siteUrl}/images/logo.svg`,
+        sameAs: ["https://github.com/lnf-guides"],
       })}
     </script>
 
-    <!-- Plausible (nur geladen, wenn consent.analytics true ist; Gate im Body-Script) -->
-    <script id="plausible-script" defer data-domain={PLAUSIBLE_DOMAIN} src="https://plausible.io/js/script.js"></script>
+    <!-- Google tag (Consent Mode v2, ohne GA) -->
+    <script>
+      // Minimal gtag-Stub + Consent-Default "denied" bis Funding Choices updated
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ dataLayer.push(arguments); try{ window.__lnf_onGtag?.(arguments); }catch(e){} }
+      gtag('consent', 'default', {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        analytics_storage: 'denied',
+        wait_for_update: 500
+      });
+
+      // Hook: fange Consent-Updates ab und halte einfachen Status für unsere Gates
+      window.__lnfConsentState = {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        analytics_storage: 'denied'
+      };
+      window.__lnf_onGtag = function(args){
+        if (args && args[0] === 'consent' && args[1] === 'update') {
+          var p = args[2] || {};
+          window.__lnfConsentState = Object.assign({}, window.__lnfConsentState, p);
+          // leite vereinfachte Events an unsere Komponenten weiter
+          var detail = {
+            analytics: window.__lnfConsentState.analytics_storage === 'granted',
+            ads: window.__lnfConsentState.ad_storage === 'granted',
+            adsPersonalized:
+              window.__lnfConsentState.ad_user_data === 'granted' &&
+              window.__lnfConsentState.ad_personalization === 'granted',
+            external: !!JSON.parse(localStorage.getItem('lnf-external-embeds') || 'false')
+          };
+          window.dispatchEvent(new CustomEvent('consent:changed', { detail }));
+          window.dispatchEvent(new Event('consent:updated'));
+        }
+      };
+    </script>
+
+    <!-- Funding Choices (CMP) – ersetze pub-… durch deine echte Publisher-ID -->
+    <script async src={"https://fundingchoicesmessages.google.com/i/" + FC_PUBLISHER_ID + "?ers=1"}></script>
+    <script>
+      // Funding Choices kann zusätzliche Iframes laden:
+      // gängige Bootstrap-Zeile (von Google-Snippet)
+      (function() {
+        function signalGooglefcPresent() {
+          if (!window.frames['googlefcPresent']) {
+            if (document.body) {
+              const iframe = document.createElement('iframe');
+              iframe.style = 'width:0;height:0;border:0;display:none';
+              iframe.name = 'googlefcPresent';
+              document.body.appendChild(iframe);
+            } else {
+              setTimeout(signalGooglefcPresent, 0);
+            }
+          }
+        }
+        signalGooglefcPresent();
+      })();
+    </script>
+
+    <!-- Plausible NICHT statisch laden: wir laden dynamisch, sobald analytics_storage=granted -->
+    <script id="plausible-loader" data-domain={PLAUSIBLE_DOMAIN}>
+      (function(){
+        var loaded = false;
+        function load(){
+          if (loaded) return;
+          loaded = true;
+          var d = document.currentScript?.getAttribute('data-domain') || '';
+          if (!d) return;
+          var s = document.createElement('script');
+          s.defer = true;
+          s.src = 'https://plausible.io/js/script.js';
+          s.setAttribute('data-domain', d);
+          s.id = 'plausible-script';
+          document.head.appendChild(s);
+        }
+        function allowed(){
+          try { return window.__lnfConsentState?.analytics_storage === 'granted'; }
+          catch(e){ return false; }
+        }
+        if (allowed()) load();
+        window.addEventListener('consent:updated', function(){ if (allowed()) load(); });
+      })();
+    </script>
   </head>
-  <body class="font-sans">
-    <a href="#content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:bg-surface focus:px-3 focus:py-2 focus:rounded">Skip to content</a>
+  <body class="font-sans bg-bg text-text">
+    <a
+      href="#content"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:bg-surface focus:px-3 focus:py-2 focus:rounded"
+      >Skip to content</a
+    >
 
     <header class="sticky top-0 z-[1000] isolate border-b border-border/60 bg-bg backdrop-blur">
       <div class="mx-auto max-w-7xl px-4 py-3 flex items-center gap-4">
@@ -83,7 +180,11 @@ const PLAUSIBLE_DOMAIN = 'lnf-guides.com';
         </a>
 
         <div class="flex-1 max-w-xl mx-auto hidden md:block">
-          <button id="open-search" class="w-full text-left border border-border/60 rounded-full px-4 py-2 text-text2 hover:bg-surface" aria-label="Open search (Cmd/Ctrl+K)">
+          <button
+            id="open-search"
+            class="w-full text-left border border-border/60 rounded-full px-4 py-2 text-text2 hover:bg-surface"
+            aria-label="Open search (Cmd/Ctrl+K)"
+          >
             Press ⌘/Ctrl K to search…
           </button>
         </div>
@@ -94,6 +195,7 @@ const PLAUSIBLE_DOMAIN = 'lnf-guides.com';
           <a href="/updates/" class="hover:underline">Updates</a>
           <a href="/about/" class="hover:underline">About</a>
           <a href="/contact/" class="btn btn-primary">Subscribe</a>
+          <button class="underline hover:text-text" data-privacy-open>Privacy settings</button>
         </nav>
       </div>
     </header>
@@ -121,7 +223,7 @@ const PLAUSIBLE_DOMAIN = 'lnf-guides.com';
         </section>
         <section class="md:col-span-2">
           <h3 class="font-semibold mb-3">Controls</h3>
-          <button data-privacy-open class="underline">Privacy settings</button>
+          <button class="underline" data-privacy-open>Privacy settings</button>
         </section>
       </div>
       <div class="mx-auto max-w-7xl px-4 pb-10 text-xs text-text2">
@@ -136,35 +238,64 @@ const PLAUSIBLE_DOMAIN = 'lnf-guides.com';
       );
     </script>
 
-    <!-- Consent: open from header/footer -->
-    <script>
-      document.getElementById('btn-privacy')?.addEventListener('click', () => {
-        window.dispatchEvent(new CustomEvent('consent:open'));
-      });
-      document.getElementById('btn-privacy-footer')?.addEventListener('click', () => {
-        window.dispatchEvent(new CustomEvent('consent:open'));
-      });
-    </script>
-
-    <!-- Analytics gate: disable Plausible unless analytics consent -->
+    <!-- Privacy: bevorzugt eigene UI, sonst CMP-Fallback; global managePrivacy bereitstellen -->
     <script>
       (function(){
-        var s = document.getElementById('plausible-script');
-        function apply(){
+        function openPrivacy(){
+          // 1) Eigene UI (ConsentBanner)
+          if (window.consentUI && typeof window.consentUI.open === 'function') {
+            window.consentUI.open('settings');
+            return;
+          }
+          // 2) IAB TCF UI (Funding Choices)
           try {
-            var c = window.consent?.get?.() || {};
-            var ok = c?.decisions ? !!c.decisions.analytics : !!c.analytics;
-            if (!ok && s) {
-              s.remove(); // prevent load
+            if (typeof __tcfapi === 'function') {
+              __tcfapi('displayConsentUi', 2, function() {});
+              return;
             }
           } catch(e){}
+          // 3) FundingChoices-spezifischer Fallback
+          try { window.fundingChoices?.showConsentDialog?.(); } catch(e){}
         }
-        apply();
-        window.addEventListener('consent:changed', apply);
+
+        // Delegation: jedes [data-privacy-open] öffnet Einstellungen
+        document.addEventListener('click', function(ev){
+          const t = ev.target?.closest?.('[data-privacy-open]');
+          if (!t) return;
+          ev.preventDefault();
+          openPrivacy();
+        });
+
+        // Für die Konsole:
+        window.managePrivacy = openPrivacy;
       })();
     </script>
 
+    <!-- Externe Embeds: einfache lokale Einstellung (unabhängig von CMP) -->
+    <script>
+      (function(){
+        // bool in localStorage steuert "external" für YouTube/Giscus
+        window.lnfExternal = {
+          get() { try { return !!JSON.parse(localStorage.getItem('lnf-external-embeds')||'false'); } catch { return false; } },
+          set(v) {
+            try { localStorage.setItem('lnf-external-embeds', JSON.stringify(!!v)); } catch {}
+            // trete consent:changed los, damit Komponenten neu prüfen
+            var detail = {
+              analytics: window.__lnfConsentState?.analytics_storage === 'granted',
+              ads: window.__lnfConsentState?.ad_storage === 'granted',
+              adsPersonalized:
+                window.__lnfConsentState?.ad_user_data === 'granted' &&
+                window.__lnfConsentState?.ad_personalization === 'granted',
+              external: !!v
+            };
+            window.dispatchEvent(new CustomEvent('consent:changed', { detail }));
+            window.dispatchEvent(new Event('consent:updated'));
+          }
+        };
+      })();
+    </script>
+
+    <!-- Banner am Ende des <body> mounten -->
     <ConsentBanner />
-    <DebugConsent />
   </body>
 </html>

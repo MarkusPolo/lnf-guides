@@ -68,12 +68,14 @@ if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length)
         <img src={frontmatter.cover} alt={frontmatter.title} loading="lazy" decoding="async" class="w-full aspect-[16/9] object-cover rounded-card shadow-soft border border-border/60" />
       )}
        <!-- Ad nach Hero -->
-      <AdsSlot name="article-top" height={180} class="mt-6" />
+      <AdsSlot name="article-top" provider="adsense" adsClient="ca-pub-XXXXXXXXXXXXXXX" adSlot="1234567890" />
+
 
       <slot />
 
       <!-- Ad am Artikelende -->
-      <AdsSlot name="article-bottom" height={280} class="mt-8" />
+      <AdsSlot name="SidebarTop" provider="adsense" adsClient="ca-pub-XXXXXXXXXXXXXXX" adSlot="1234567890" />
+
       <PrevNext currentSlug={currentSlug} category={frontmatter.category} />
       <RelatedPosts currentSlug={currentSlug} category={frontmatter.category} tags={frontmatter.tags} />
 

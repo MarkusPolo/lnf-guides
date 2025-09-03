@@ -1,17 +1,13 @@
 ---
 /**
- * DSGVO-Consent Banner + UI
- * - Globale API: window.consent (get/set/setAll/decided/open)
- * - Globale UI:  window.consentUI.open(mode), window.consentUI.close()
- * - Trigger:     Klick auf [data-privacy-open] öffnet Einstellungen
- *
- * NEU:
- *  - Zusätzliche Feinsteuerung: adsPersonalized (separat von ads)
- *  - POLICY_VERSION = 2  -> erzwingt erneute Abfrage (Neuer Zweck)
+ * Consent Banner mit Key-Migration + sofortigem Consent-Mode-Sync
+ * - Kanonischer STORAGE_KEY: 'lnf-consent-1'
+ * - Liest alte Keys ('lnf-consent-v1', 'lnf-consent'), migriert beim Write
+ * - Spiegelt gespeicherten Stand direkt in gtag Consent Mode v2
  */
-
-const STORAGE_KEY = 'lnf-consent-v1';
-const POLICY_VERSION = 2; // <- neu
+const STORAGE_KEY = 'lnf-consent-1';         // <- NEU: Kanonisch
+const ALT_KEYS = ['lnf-consent-v1','lnf-consent']; // <- Legacy
+const POLICY_VERSION = 2;
 ---
 
 <div
@@ -21,12 +17,8 @@ const POLICY_VERSION = 2; // <- neu
   data-policy-version={String(POLICY_VERSION)}
   aria-hidden="true"
 >
-  <!-- Backdrop -->
   <div class="absolute inset-0 bg-black/70"></div>
-
-  <!-- Panel -->
   <div class="relative z-[1] mx-auto mt-16 w-[min(680px,calc(100%-2rem))] rounded-card border border-border/60 bg-[#111624] shadow-soft">
-    <!-- Banner -->
     <div id="consent-banner" class="p-4 md:p-5">
       <h2 class="text-xl font-semibold mb-2">Privacy Preferences</h2>
       <p class="text-sm text-text2">
@@ -40,7 +32,6 @@ const POLICY_VERSION = 2; // <- neu
       </div>
     </div>
 
-    <!-- Settings -->
     <div id="consent-settings" class="hidden p-4 md:p-5 border-t border-border/60">
       <h3 class="text-lg font-semibold mb-3">Customize preferences</h3>
 
@@ -78,7 +69,6 @@ const POLICY_VERSION = 2; // <- neu
             <input id="c-ads" type="checkbox" class="cursor-pointer" />
           </div>
 
-          <!-- Nested: Personalized ads -->
           <div class="mt-3 pl-6 border-l border-dashed border-border/60">
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -103,168 +93,182 @@ const POLICY_VERSION = 2; // <- neu
   </div>
 </div>
 
-<script>
-  (function () {
-    const root = document.getElementById('consent-root');
-    if (!root) return;
+<script is:inline>
+(function () {
+  const root = document.getElementById('consent-root');
+  if (!root) return;
 
-    const storageKey = root.getAttribute('data-storage-key') || 'lnf-consent-v1';
-    const policyVersion = Number(root.getAttribute('data-policy-version') || '2');
+  const PRIMARY_KEY = root.getAttribute('data-storage-key') || 'lnf-consent-1';
+  const ALT_KEYS = ['lnf-consent-v1','lnf-consent'];
+  const policyVersion = Number(root.getAttribute('data-policy-version') || '2');
 
-    // ---------- storage ----------
-    const defaults = () => ({
+  // ---------- Utils ----------
+  const defaults = () => ({
+    version: 2,
+    policyVersion,
+    ts: 0,
+    decisions: { analytics: false, external: false, ads: false, adsPersonalized: false }
+  });
+
+  function readAny(){
+    // 1) Primary
+    try {
+      const raw = localStorage.getItem(PRIMARY_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    // 2) Legacy
+    for (const k of ALT_KEYS) {
+      try {
+        const raw = localStorage.getItem(k);
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return defaults();
+  }
+
+  function normalize(p){
+    const d = p?.decisions || {};
+    return {
+      version: Number(p?.version ?? 1),
+      policyVersion: Number(p?.policyVersion ?? policyVersion),
+      ts: Number(p?.ts ?? 0),
+      decisions: {
+        analytics: !!d.analytics,
+        external:  !!d.external,
+        ads:       !!d.ads,
+        adsPersonalized: !!d.adsPersonalized
+      }
+    };
+  }
+
+  function applyConsentMode(dec){
+    try {
+      gtag('consent', 'update', {
+        analytics_storage: dec.analytics ? 'granted' : 'denied',
+        ad_storage: dec.ads ? 'granted' : 'denied',
+        ad_user_data: dec.adsPersonalized ? 'granted' : 'denied',
+        ad_personalization: dec.adsPersonalized ? 'granted' : 'denied'
+      });
+    } catch(e){}
+  }
+
+  function dispatch(decisions){
+    window.dispatchEvent(new CustomEvent('consent:changed', { detail: decisions }));
+    window.dispatchEvent(new Event('consent:updated'));
+  }
+
+  function write(state){
+    // Schreibe nur an den PRIMARY_KEY; optional: Legacy leeren
+    localStorage.setItem(PRIMARY_KEY, JSON.stringify(state));
+    try { for (const k of ALT_KEYS) localStorage.removeItem(k); } catch {}
+    applyConsentMode(state.decisions);
+    dispatch(state.decisions);
+  }
+
+  function decided(){
+    const s = normalize(readAny());
+    return !!s.ts && s.policyVersion === policyVersion;
+  }
+
+  function set(partial){
+    const s = normalize(readAny());
+    const next = {
+      ...s,
       version: 2,
       policyVersion,
-      ts: 0,
-      decisions: { analytics: false, external: false, ads: false, adsPersonalized: false }
-    });
-
-    function read() {
-      try {
-        const raw = localStorage.getItem(storageKey);
-        if (!raw) return defaults();
-        const p = JSON.parse(raw);
-        const d = (p && p.decisions) ? p.decisions : {};
-        return {
-          version: Number(p?.version ?? 1),
-          policyVersion: Number(p?.policyVersion ?? policyVersion),
-          ts: Number(p?.ts ?? 0),
-          decisions: {
-            analytics: !!d.analytics,
-            external:  !!d.external,
-            ads:       !!d.ads,
-            adsPersonalized: !!d.adsPersonalized // default false if missing
-          }
-        };
-      } catch { return defaults(); }
-    }
-
-    function write(state) {
-      localStorage.setItem(storageKey, JSON.stringify(state));
-      // Kompatibel für alle Hörer
-      window.dispatchEvent(new CustomEvent('consent:changed', { detail: state.decisions }));
-      window.dispatchEvent(new Event('consent:updated'));
-    }
-
-    function decided() {
-      const s = read();
-      return !!s.ts && s.policyVersion === policyVersion;
-    }
-
-    function set(partial) {
-      const s = read();
-      const next = {
-        ...s,
-        version: 2,
-        policyVersion,
-        ts: Date.now(),
-        decisions: { ...s.decisions, ...partial }
-      };
-      write(next);
-      return next;
-    }
-
-    function setAll(value) {
-      const v = !!value;
-      const next = {
-        version: 2,
-        policyVersion,
-        ts: Date.now(),
-        decisions: { analytics: v, external: v, ads: v, adsPersonalized: v }
-      };
-      write(next);
-      return next;
-    }
-
-    // expose
-    if (!window.consent) {
-      window.consent = {
-        KEY: storageKey,
-        version: 2,
-        policyVersion,
-        get: () => read().decisions,
-        set,
-        setAll,
-        decided,
-        open: (mode) => window.consentUI?.open(mode)
-      };
-    }
-
-    // ---------- UI ----------
-    const banner   = document.getElementById('consent-banner');
-    const settings = document.getElementById('consent-settings');
-
-    const btnAcceptAll    = document.getElementById('btn-accept-all');
-    const btnRejectNon    = document.getElementById('btn-reject-non');
-    const btnOpenSettings = document.getElementById('btn-open-settings');
-    const btnBack         = document.getElementById('btn-back');
-    const btnSave         = document.getElementById('btn-save');
-
-    const cAnalytics = document.getElementById('c-analytics');
-    const cExternal  = document.getElementById('c-external');
-    const cAds       = document.getElementById('c-ads');
-    const cAdsP      = document.getElementById('c-ads-p');
-
-    function showRoot() { root.classList.remove('hidden'); root.setAttribute('aria-hidden','false'); document.documentElement.style.overflow='hidden'; }
-    function hideRoot() { root.classList.add('hidden'); root.setAttribute('aria-hidden','true');  document.documentElement.style.overflow=''; }
-
-    function showBanner()   { banner?.classList.remove('hidden'); settings?.classList.add('hidden'); showRoot(); }
-    function showSettings() { settings?.classList.remove('hidden'); banner?.classList.add('hidden'); showRoot(); }
-
-    function syncPersonalizedDisabled(){
-      const adsOn = !!(cAds && cAds.checked);
-      if (cAdsP) {
-        cAdsP.disabled = !adsOn;
-        if (!adsOn) cAdsP.checked = false;
-      }
-    }
-
-    function fillSettingsFromState() {
-      const s = read();
-      if (cAnalytics) cAnalytics.checked = !!s.decisions.analytics;
-      if (cExternal)  cExternal.checked  = !!s.decisions.external;
-      if (cAds)       cAds.checked       = !!s.decisions.ads;
-      if (cAdsP)      cAdsP.checked      = !!s.decisions.adsPersonalized && !!s.decisions.ads; // nur sinnvoll, wenn Ads an
-      syncPersonalizedDisabled();
-    }
-
-    // interactions
-    cAds?.addEventListener('change', syncPersonalizedDisabled);
-
-    btnAcceptAll?.addEventListener('click', () => { setAll(true); hideRoot(); });
-    btnRejectNon?.addEventListener('click', () => { set({ analytics:false, external:false, ads:false, adsPersonalized:false }); hideRoot(); });
-    btnOpenSettings?.addEventListener('click', () => { fillSettingsFromState(); showSettings(); });
-    btnBack?.addEventListener('click', () => { showBanner(); });
-    btnSave?.addEventListener('click', () => {
-      set({
-        analytics: !!(cAnalytics && cAnalytics.checked),
-        external:  !!(cExternal  && cExternal.checked),
-        ads:       !!(cAds       && cAds.checked),
-        adsPersonalized: !!(cAdsP && cAdsP.checked && cAds && cAds.checked)
-      });
-      hideRoot();
-    });
-
-    // Backdrop click -> nur schließen, wenn schon entschieden
-    root.addEventListener('click', (e) => { if (e.target === root && decided()) hideRoot(); });
-
-    // Globale UI-API + Reopen
-    window.consentUI = {
-      open: (mode) => {
-        if (mode === 'settings' || decided()) { fillSettingsFromState(); showSettings(); }
-        else { showBanner(); }
-      },
-      close: hideRoot
+      ts: Date.now(),
+      decisions: { ...s.decisions, ...partial }
     };
-    window.managePrivacy = () => window.consentUI.open('settings');
+    write(next);
+    return next;
+  }
 
-    // Delegation: jedes [data-privacy-open] öffnet UI
-    document.addEventListener('click', (ev) => {
-      const t = ev.target?.closest?.('[data-privacy-open]');
-      if (t) { ev.preventDefault(); window.consentUI.open('settings'); }
+  function setAll(value){
+    const v = !!value;
+    const next = {
+      version: 2,
+      policyVersion,
+      ts: Date.now(),
+      decisions: { analytics: v, external: v, ads: v, adsPersonalized: v }
+    };
+    write(next);
+    return next;
+  }
+
+  // Globale API
+  if (!window.consent) {
+    window.consent = {
+      KEY: PRIMARY_KEY,
+      version: 2,
+      policyVersion,
+      get: () => normalize(readAny()).decisions,
+      set,
+      setAll,
+      decided,
+      open: (mode) => window.consentUI?.open(mode)
+    };
+  }
+
+  // ---------- UI ----------
+  const banner   = document.getElementById('consent-banner');
+  const settings = document.getElementById('consent-settings');
+  const btnAcceptAll = document.getElementById('btn-accept-all');
+  const btnRejectNon = document.getElementById('btn-reject-non');
+  const btnOpenSettings = document.getElementById('btn-open-settings');
+  const btnBack  = document.getElementById('btn-back');
+  const btnSave  = document.getElementById('btn-save');
+  const cAnalytics = document.getElementById('c-analytics');
+  const cExternal  = document.getElementById('c-external');
+  const cAds       = document.getElementById('c-ads');
+  const cAdsP      = document.getElementById('c-ads-p');
+
+  function showRoot(){ root.classList.remove('hidden'); root.setAttribute('aria-hidden','false'); document.documentElement.style.overflow='hidden'; }
+  function hideRoot(){ root.classList.add('hidden'); root.setAttribute('aria-hidden','true');  document.documentElement.style.overflow=''; }
+  function showBanner(){ banner?.classList.remove('hidden'); settings?.classList.add('hidden'); showRoot(); }
+  function showSettings(){ settings?.classList.remove('hidden'); banner?.classList.add('hidden'); showRoot(); }
+
+  function syncPersonalizedDisabled(){
+    const adsOn = !!(cAds && cAds.checked);
+    if (cAdsP){ cAdsP.disabled = !adsOn; if (!adsOn) cAdsP.checked = false; }
+  }
+
+  function fillSettingsFromState(){
+    const s = normalize(readAny());
+    if (cAnalytics) cAnalytics.checked = !!s.decisions.analytics;
+    if (cExternal)  cExternal.checked  = !!s.decisions.external;
+    if (cAds)       cAds.checked       = !!s.decisions.ads;
+    if (cAdsP)      cAdsP.checked      = !!s.decisions.adsPersonalized && !!s.decisions.ads;
+    syncPersonalizedDisabled();
+  }
+
+  cAds?.addEventListener('change', syncPersonalizedDisabled);
+  btnAcceptAll?.addEventListener('click', () => { setAll(true); hideRoot(); });
+  btnRejectNon?.addEventListener('click', () => { set({ analytics:false, external:false, ads:false, adsPersonalized:false }); hideRoot(); });
+  btnOpenSettings?.addEventListener('click', () => { fillSettingsFromState(); showSettings(); });
+  btnBack?.addEventListener('click', () => { showBanner(); });
+  btnSave?.addEventListener('click', () => {
+    set({
+      analytics: !!(cAnalytics && cAnalytics.checked),
+      external:  !!(cExternal  && cExternal.checked),
+      ads:       !!(cAds       && cAds.checked),
+      adsPersonalized: !!(cAdsP && cAdsP.checked && cAds && cAds.checked)
     });
+    hideRoot();
+  });
 
-    // Erstbesuch?
+  root.addEventListener('click', (e) => { if (e.target === root && decided()) hideRoot(); });
+
+  window.consentUI = {
+    open: (mode) => { if (mode === 'settings' || decided()) { fillSettingsFromState(); showSettings(); } else { showBanner(); } },
+    close: hideRoot
+  };
+
+  // ---------- Sofort-Sync beim Seitenstart ----------
+  (function initialSync(){
+    const s = normalize(readAny());
+    applyConsentMode(s.decisions); // setzt __lnfConsentState via gtag-Hook
+    dispatch(s.decisions);
     if (!decided()) showBanner();
   })();
+})();
 </script>

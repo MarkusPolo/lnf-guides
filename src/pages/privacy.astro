@@ -13,65 +13,53 @@ const canonical = new URL('/privacy/', Astro.site!);
     <section class="card p-4 md:p-5 mb-6">
       <h2 class="text-xl font-semibold mb-2">Your current choices</h2>
       <ul class="space-y-2 text-sm">
-        <li class="flex justify-between"><span>Analytics</span> <strong id="st-analytics">–</strong></li>
-        <li class="flex justify-between"><span>External embeds</span> <strong id="st-external">–</strong></li>
-        <li class="flex justify-between"><span>Ads</span> <strong id="st-ads">–</strong></li>
+        <li class="flex justify-between"><span>Analytics (Consent Mode)</span> <strong id="st-analytics">–</strong></li>
+        <li class="flex justify-between"><span>Ads (Consent Mode)</span> <strong id="st-ads">–</strong></li>
         <li class="flex justify-between"><span>Personalized ads</span> <strong id="st-ads-p">–</strong></li>
+        <li class="flex justify-between"><span>External embeds (YouTube, Giscus)</span> <strong id="st-ext">–</strong></li>
       </ul>
-      <div class="mt-4 flex gap-3">
-        <button class="btn btn-primary" data-privacy-open>Open privacy settings</button>
-        <button id="btn-reset" class="btn btn-outline">Reset consent</button>
+      <div class="mt-4 flex gap-3 items-center">
+        <button class="btn btn-primary" data-privacy-open>Open consent manager</button>
+        <label class="ml-2 inline-flex items-center gap-2 text-sm">
+          <input id="ext-toggle" type="checkbox" />
+          Always allow external embeds
+        </label>
       </div>
     </section>
 
     <section class="prose max-w-none">
-      <h2>Notes on ads</h2>
-      <p>
-        If you allow <strong>Ads</strong> but not <strong>Personalized ads</strong>,
-        we request non-personalized ads from Google (NPA). If you enable
-        <strong>Personalized ads</strong>, Google may use data to tailor ads to you.
-      </p>
+      <h2>Notes</h2>
+      <ul>
+        <li><strong>Ads & personalization</strong> are handled by Google Funding Choices (TCF 2.2 + Consent Mode v2).</li>
+        <li><strong>Analytics</strong> (Plausible) only loads if Consent Mode <code>analytics_storage</code> is granted.</li>
+        <li><strong>External embeds</strong> are a local site preference (no external calls until allowed).</li>
+      </ul>
     </section>
   </div>
 
   <script>
     (function(){
-      const LS_KEYS = ['lnf-consent-v1','lnf-consent'];
-      function readDecisions() {
-        try {
-          const via = window.consent?.get?.();
-          if (via && via.analytics !== undefined) return via;
-          if (via?.decisions) return via.decisions;
-        } catch {}
-        for (const k of LS_KEYS) {
-          try {
-            const raw = localStorage.getItem(k);
-            if (raw) return (JSON.parse(raw)?.decisions) || {};
-          } catch {}
-        }
-        return {};
-      }
       function yn(v){ return v ? 'Allowed' : 'Blocked'; }
+      function getExt(){ try { return !!JSON.parse(localStorage.getItem('lnf-external-embeds') || 'false'); } catch { return false; } }
       function paint(){
-        const d = readDecisions();
-        document.getElementById('st-analytics').textContent = yn(!!d.analytics);
-        document.getElementById('st-external').textContent  = yn(!!d.external);
-        document.getElementById('st-ads').textContent       = yn(!!d.ads);
-        document.getElementById('st-ads-p').textContent     = yn(!!d.adsPersonalized && !!d.ads);
+        const c = window.__lnfConsentState || {};
+        const analytics = c.analytics_storage === 'granted';
+        const ads = c.ad_storage === 'granted';
+        const adsP = (c.ad_user_data === 'granted' && c.ad_personalization === 'granted');
+        const ext = getExt();
+        document.getElementById('st-analytics').textContent = yn(analytics);
+        document.getElementById('st-ads').textContent = yn(ads);
+        document.getElementById('st-ads-p').textContent = yn(adsP);
+        document.getElementById('st-ext').textContent = yn(ext);
+        const t = document.getElementById('ext-toggle');
+        if (t) t.checked = ext;
       }
       paint();
-      window.addEventListener('consent:changed', paint);
       window.addEventListener('consent:updated', paint);
 
-      document.getElementById('btn-reset')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        try {
-          localStorage.removeItem('lnf-consent-v1');
-          localStorage.removeItem('lnf-consent');
-          window.dispatchEvent(new CustomEvent('consent:changed', { detail: { analytics:false, external:false, ads:false, adsPersonalized:false }}));
-        } catch {}
-        if (window?.consentUI?.open) window.consentUI.open('settings');
-        setTimeout(paint, 50);
+      document.getElementById('ext-toggle')?.addEventListener('change', (e)=>{
+        try { localStorage.setItem('lnf-external-embeds', JSON.stringify(!!e.target.checked)); } catch {}
+        window.dispatchEvent(new Event('consent:updated'));
       });
     })();
   </script>

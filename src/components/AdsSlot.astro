@@ -1,20 +1,4 @@
 ---
-/**
- * DSGVO-freundlicher Ad-Slot mit Personalisierung:
- * - Lädt AdSense nur wenn consent.ads === true
- * - Personalisierung NUR wenn consent.adsPersonalized === true
- *   -> (window.adsbygoogle.requestNonPersonalizedAds = 0/1)
- * - Ohne Consent: House-Ad
- *
- * Props:
- *  - name: string
- *  - height?: number = 250
- *  - provider?: 'house' | 'adsense' = 'house'
- *  - adsClient?: string   (erforderlich bei adsense)
- *  - adSlot?: string      (erforderlich bei adsense)
- *  - class?: string
- */
-
 interface Props {
   name: string;
   height?: number;
@@ -44,124 +28,225 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
   data-ads-client={adsClient}
   data-ad-slot={adSlot}
   data-height={String(height)}
+  data-state="init"
 >
   <div class="h-full flex items-center justify-between gap-3 p-4">
     <div class="text-left">
       <div class="text-sm text-text2 mb-1">Support LNF Guides</div>
-      <div class="text-base text-text">Ads are disabled until you allow them.</div>
+      <div class="text-base text-text">Loading…</div>
       <button class="underline mt-1" data-privacy-open>Privacy settings</button>
     </div>
     <div class="hidden md:block text-right">
-      <div class="inline-block rounded-card border border-[#68D391]/50 bg-[#68D391]/15 px-3 py-1 text-[11px]">
-        House • {name}
+      <div class="inline-block rounded-card border border-border/60 bg-border/20 px-3 py-1 text-[11px]">
+        Ads • {name}
       </div>
     </div>
   </div>
 </div>
 
-<script>
-  (function(){
-    const root =
-      document.currentScript?.previousElementSibling ||
-      document.querySelector('#{wrapId}'.replace('#','')) || // harmless
-      document.querySelector('[data-provider]');
-    if (!root) return;
+<script is:inline data-for={wrapId}>
+(function(){
+  const scriptEl = document.currentScript;
+  if (!scriptEl) return;
 
-    const provider   = root.getAttribute('data-provider') || 'house';
-    const adsClient  = root.getAttribute('data-ads-client') || '';
-    const adSlot     = root.getAttribute('data-ad-slot') || '';
-    const height     = Number(root.getAttribute('data-height') || '250');
+  let root = scriptEl.previousElementSibling;
+  if (!root || !(root instanceof HTMLElement)) {
+    const id = scriptEl.getAttribute('data-for');
+    if (id) root = document.getElementById(id);
+  }
+  if (!root || !(root instanceof HTMLElement)) return;
 
-    // ---- Consent helpers ----
-    const LS_KEYS = ['lnf-consent-v1','lnf-consent'];
-    function readLS() {
-      for (const k of LS_KEYS) {
-        try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw); } catch {}
-      }
-      return null;
-    }
-    function getDecisions() {
-      try {
-        const via = window.consent?.get?.();
-        if (via && (via.ads !== undefined)) return via;
-        if (via?.decisions) return via.decisions;
-      } catch {}
-      const d = readLS()?.decisions || {};
-      return {
-        analytics: !!d.analytics,
-        external: !!d.external,
-        ads: !!d.ads,
-        adsPersonalized: !!d.adsPersonalized
-      };
-    }
+  const provider   = root.getAttribute('data-provider') || 'house';
+  const adsClient  = root.getAttribute('data-ads-client') || '';
+  const adSlot     = root.getAttribute('data-ad-slot') || '';
+  const height     = Number(root.getAttribute('data-height') || '250');
 
-    function clearChildren(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+  const LS_KEYS = ['lnf-consent-1','lnf-consent-v1','lnf-consent'];
 
-    function renderHouse() {
-      clearChildren(root);
-      const box = document.createElement('div');
-      box.className = 'h-full flex items-center justify-between gap-3 p-4';
-      box.innerHTML = `
-        <div class="text-left">
-          <div class="text-sm text-text2 mb-1">Support LNF Guides</div>
-          <div class="text-base text-text">Ads are disabled until you allow them.</div>
-          <button class="underline mt-1" data-privacy-open>Privacy settings</button>
+  // ---------- helpers ----------
+  function setState(s){ root.setAttribute('data-state', s); }
+  function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+
+  function badge(allowed){
+    const tone = allowed ? 'border-[#68D391]/50 bg-[#68D391]/15' : 'border-border/60 bg-border/20';
+    const label = allowed ? 'Allowed' : 'Disallowed';
+    return `<div class="inline-block rounded-card border ${tone} px-3 py-1 text-[11px]">${label} • ${root.id || 'slot'}</div>`;
+  }
+
+  function renderInfo(allowed, statusText, personalized) {
+    clear(root);
+    const box = document.createElement('div');
+    box.className = 'h-full flex items-center justify-between gap-3 p-4';
+    box.innerHTML = `
+      <div class="text-left">
+        <div class="text-sm text-text2 mb-1">Support LNF Guides</div>
+        <div class="text-base text-text">${statusText}</div>
+        <div class="text-xs text-text2 mt-1">
+          Debug: Personalized: <strong>${personalized ? 'On' : 'Off'}</strong>
         </div>
-        <div class="hidden md:block text-right">
-          <div class="inline-block rounded-card border border-[#68D391]/50 bg-[#68D391]/15 px-3 py-1 text-[11px]">House • ${root.id || 'slot'}</div>
-        </div>
-      `;
-      root.appendChild(box);
-    }
+        <button class="underline mt-1" data-privacy-open>Privacy settings</button>
+      </div>
+      <div class="hidden md:block text-right">
+        ${badge(allowed)}
+      </div>
+    `;
+    root.appendChild(box);
+  }
 
-    function ensureAdSenseScript(client) {
-      const id = 'adsbygoogle-js';
-      if (document.getElementById(id)) return;
+  function readConsentLS(){
+    for (const k of LS_KEYS){
+      try{
+        const raw = localStorage.getItem(k);
+        if (raw){
+          const p = JSON.parse(raw);
+          const d = p?.decisions || {};
+          return {
+            analytics: !!d.analytics,
+            external: !!d.external,
+            ads: !!d.ads,
+            adsPersonalized: !!d.adsPersonalized
+          };
+        }
+      }catch{}
+    }
+    return { analytics:false, external:false, ads:false, adsPersonalized:false };
+  }
+
+  // --------- Allowed/Personalized Ermittlung (stabil) ---------
+  function eventDecisions(e){
+    const d = e?.detail;
+    if (!d) return null;
+    if (typeof d.ads === 'boolean' || typeof d.adsPersonalized === 'boolean') return d;
+    if (d.decisions) return d.decisions;
+    return null;
+  }
+
+  function apiDecisions(){
+    try{
+      const v = window.consent?.get?.();
+      if (!v) return null;
+      if (v.decisions) return v.decisions;
+      if (typeof v === 'object' && ('ads' in v || 'adsPersonalized' in v)) return v;
+    }catch{}
+    return null;
+  }
+
+  function cmDecisions(){
+    try{
+      const st = window.__lnfConsentState || {};
+      const ads = st.ad_storage === 'granted';
+      const personalized = (st.ad_user_data === 'granted') && (st.ad_personalization === 'granted');
+      return { ads, adsPersonalized: personalized };
+    }catch{}
+    return null;
+  }
+
+  function resolveConsent(e){
+    // Priorität: Event → API → LS → ConsentMode
+    const fromEvt = eventDecisions(e);
+    if (fromEvt) return {
+      ads: !!fromEvt.ads,
+      adsPersonalized: !!fromEvt.adsPersonalized
+    };
+    const fromApi = apiDecisions();
+    if (fromApi) return {
+      ads: !!fromApi.ads,
+      adsPersonalized: !!fromApi.adsPersonalized
+    };
+    const fromLS = readConsentLS();
+    if (fromLS) return {
+      ads: !!fromLS.ads,
+      adsPersonalized: !!fromLS.adsPersonalized
+    };
+    const fromCM = cmDecisions();
+    if (fromCM) return fromCM;
+    return { ads:false, adsPersonalized:false };
+  }
+
+  function ensureAdSenseScript(client){
+    const id = 'adsbygoogle-js';
+    if (document.getElementById(id)) return true;
+    try{
       const s = document.createElement('script');
       s.id = id;
       s.async = true;
       s.crossOrigin = 'anonymous';
       s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(client);
+      s.setAttribute('data-ad-client', client);
       document.head.appendChild(s);
+      return true;
+    }catch{ return false; }
+  }
+
+  function alreadyMounted(){ return !!root.querySelector('ins.adsbygoogle'); }
+
+  function mountAdSenseAndReport(consent){
+    const { adsPersonalized } = consent; // nur für Debug-Anzeige – AdSense respektiert Consent Mode automatisch
+
+    if (!adsClient || !adSlot){
+      setState('allowed-config-missing');
+      renderInfo(true, 'Allowed — missing configuration (client/slot).', adsPersonalized);
+      return;
+    }
+    const ok = ensureAdSenseScript(adsClient);
+    if (!ok){
+      setState('allowed-script-blocked');
+      renderInfo(true, 'Allowed — script blocked (CSP/adblock).', adsPersonalized);
+      return;
     }
 
-    function mountAdSense({ personalized }){
-      if (!adsClient || !adSlot) { renderHouse(); return; }
-      ensureAdSenseScript(adsClient);
-
-      clearChildren(root);
-
-      // Personalisierung steuern (NPA: 1 = non-personalized, 0 = personalized)
-      try {
-        const npa = personalized ? 0 : 1;
-        (window.adsbygoogle = window.adsbygoogle || []).requestNonPersonalizedAds = npa;
-      } catch {}
-
+    if (!alreadyMounted()){
+      clear(root);
       const ins = document.createElement('ins');
       ins.className = 'adsbygoogle';
       ins.style.cssText = `display:block; min-height:${height}px;`;
       ins.setAttribute('data-ad-client', adsClient);
       ins.setAttribute('data-ad-slot', adSlot);
       ins.setAttribute('data-full-width-responsive', 'true');
-
       root.appendChild(ins);
-
-      try { (window.adsbygoogle = window.adsbygoogle || []).push({}); }
-      catch { renderHouse(); }
     }
 
-    function apply(){
-      const d = getDecisions();
-      if (!d.ads) { renderHouse(); return; }
-      if (provider === 'adsense') {
-        mountAdSense({ personalized: !!d.adsPersonalized });
-      } else {
-        renderHouse();
-      }
+    try{
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+      setState('allowed-requested');
+      renderInfo(true, 'Allowed — requesting ad…', adsPersonalized);
+
+      const ins = root.querySelector('ins.adsbygoogle');
+      setTimeout(() => {
+        const hasIframe = !!(ins && ins.querySelector('iframe'));
+        const h = ins ? ins.offsetHeight : 0;
+        if (hasIframe || h >= 20){
+          setState('allowed-rendered');
+          renderInfo(true, 'Allowed — rendered.', adsPersonalized);
+        } else {
+          setState('allowed-no-fill-or-blocked');
+          renderInfo(true, 'Allowed — no ad rendered (adblock/CSP/no-fill).', adsPersonalized);
+        }
+      }, 1200);
+    }catch(e){
+      setState('allowed-init-failed');
+      renderInfo(true, 'Allowed — initialization failed (adblock).', adsPersonalized);
+    }
+  }
+
+  function apply(e){
+    if (provider !== 'adsense'){
+      setState('provider-house');
+      renderInfo(false, 'Provider is "house" (no ad requested).', false);
+      return;
     }
 
-    apply();
-    window.addEventListener('consent:changed', apply);
-    window.addEventListener('consent:updated', apply);
-  })();
+    const consent = resolveConsent(e);
+    if (consent.ads){
+      mountAdSenseAndReport(consent);
+    } else {
+      setState('disallowed');
+      renderInfo(false, 'Disallowed — ads blocked by consent.', consent.adsPersonalized);
+    }
+  }
+
+  apply();
+  window.addEventListener('consent:updated', apply);
+  window.addEventListener('consent:changed', apply);
+})();
 </script>
