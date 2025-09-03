@@ -165,34 +165,45 @@ const FC_PUBLISHER_ID = "pub-6618488631609364";
       (function(){
         var loaded = false;
 
-        // optional: Queue für Custom Events (kompatibel zur Vercel Doku)
-        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-
-        function load(){
-          if (loaded) return;
-          loaded = true;
-          var s = document.createElement('script');
-          s.defer = true;
-          s.src = '/_vercel/insights/script.js'; // Standard-Endpunkt von Vercel WA
-          s.id = 'vercel-analytics-script';
-          document.head.appendChild(s);
-        }
+        // Optional: Queue für Custom Events (kompatibel zur Vercel-Doku)
+        window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments); };
 
         function allowed(){
           try { return !!(window.lnfConsent && window.lnfConsent.allowed('analytics')); }
           catch(e){ return false; }
         }
 
+        function load(){
+          if (loaded) return;
+          if (!allowed()) return;
+          loaded = true;
+          var s = document.createElement('script');
+          s.defer = true;
+          s.src = '/_vercel/insights/script.js';
+          s.id = 'vercel-analytics-script';
+          document.head.appendChild(s);
+        }
+
+        // 1) Sofort prüfen
         if (allowed()) load();
 
-        // auf nachträgliche Einwilligung reagieren
-        try {
-          window.lnfConsent && window.lnfConsent.on(function(d){ if (d && d.analytics) load(); });
-        } catch(e){}
-      })();
-    </script>
+        // 2) Auf Bridge-Callbacks reagieren
+        try { window.lnfConsent && window.lnfConsent.on(function(d){ if (d && d.analytics) load(); }); } catch(e){}
 
-    
+        // 3) Auf deine Custom-Events reagieren (falls das Banner sie feuert)
+        window.addEventListener('consent:changed', function(ev){ if (ev?.detail?.analytics) load(); }, { passive: true });
+        window.addEventListener('consent:updated', function(){ if (allowed()) load(); }, { passive: true });
+
+        // 4) Race-Fix: nach DOMContentLoaded und im Microtask erneut prüfen
+        document.readyState === 'loading'
+          ? document.addEventListener('DOMContentLoaded', function(){ if (allowed()) load(); }, { once:true })
+          : Promise.resolve().then(function(){ if (allowed()) load(); });
+
+        // 5) Manuell auslösbar zu Testzwecken
+        window.__va_forceLoad = function(){ loaded=false; load(); };
+      })();
+      </script>
+  
   </head>
   <body class="font-sans bg-bg text-text">
     <a href="#content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:bg-surface focus:px-3 focus:py-2 focus:rounded">Skip to content</a>
