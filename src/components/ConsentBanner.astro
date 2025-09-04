@@ -6,7 +6,7 @@
  *   sondern ausschließlich über Funding Choices (TCF 2.2 + Consent Mode v2).
  * - Analytics & External embeds bleiben lokal steuerbar.
  * - Bridge: gtag('consent','update', ...) von Funding Choices → LS sync (ads, adsPersonalized).
- * - HINWEIS: Für Limited Ads laden wir den AdSense-Tag nun immer (siehe BaseLayout),
+ * - HINWEIS: Für Limited Ads laden wir den AdSense-Tag immer (siehe BaseLayout),
  *   Consent Mode/TCF entscheidet über PA/NPA/LTD.
  */
 const STORAGE_KEY = 'lnf-consent-1';
@@ -69,7 +69,7 @@ const POLICY_VERSION = 2;
             <label for="c-external" class="font-semibold cursor-pointer">External embeds</label>
             <div class="text-sm text-text2">Loads external media (YouTube, Giscus, etc.).</div>
           </div>
-          <input id="c-external" type="checkbox" class="cursor-pointer" />
+        <input id="c-external" type="checkbox" class="cursor-pointer" />
         </div>
 
         <!-- Ads (managed by Google CMP) -->
@@ -211,7 +211,16 @@ const POLICY_VERSION = 2;
 
   function openGoogleCMP(){
     try { if (typeof __tcfapi === 'function') { __tcfapi('displayConsentUi', 2, function(){}); return; } } catch {}
-    try { window.fundingChoices?.showConsentDialog?.(); return; } catch {}
+    try {
+      window.googlefc = window.googlefc || {};
+      window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
+      window.googlefc.callbackQueue.push(function(){
+        if (typeof googlefc.showRevocationMessage === 'function') {
+          googlefc.showRevocationMessage();
+        }
+      });
+      return;
+    } catch {}
     showSettings();
   }
 
