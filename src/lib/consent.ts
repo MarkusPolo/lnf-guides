@@ -1,7 +1,6 @@
-// src/lib/consent.ts
-export const CONSENT_KEY = 'lnf-consent-1'; // statt 'lnf-consent-v1'
-export const CONSENT_VERSION = 2;   // technische Banner-Version (UI/Logik)
-export const POLICY_VERSION = 2;    // rechtstextliche Version (neuer Zweck: personalized ads)
+export const CONSENT_KEY = 'lnf-consent-1';
+export const CONSENT_VERSION = 2;
+export const POLICY_VERSION = 2;
 const MAX_AGE_DAYS = 180;
 
 export type ConsentDecisions = {
@@ -14,7 +13,7 @@ export type ConsentDecisions = {
 export type ConsentRecord = {
   version: number;
   policyVersion: number;
-  ts: number; // Unix ms
+  ts: number;
   decisions: ConsentDecisions;
 };
 
