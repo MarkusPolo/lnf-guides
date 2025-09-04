@@ -127,6 +127,23 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
       })();
     </script>
 
+    <script>
+      // Erzwinge FC-Dialog nach Page-Load, sobald __tcfapi bereit ist.
+      (function forceFC(){
+        var started = Date.now();
+        var tm = setInterval(function(){
+          if (typeof __tcfapi === 'function') {
+            try { __tcfapi('displayConsentUi', 2, function(){}); } catch(e){}
+            clearInterval(tm);
+          } else if (Date.now() - started > 15000) { // 15s Timeout
+            clearInterval(tm);
+            console.warn('FC: __tcfapi nicht verfügbar (Timeout).');
+          }
+        }, 250);
+      })();
+    </script>
+
+
     <!-- LNF Consent Bridge (für Analytics/Embeds) -->
     <script>
       (function(){
