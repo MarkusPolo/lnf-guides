@@ -11,18 +11,20 @@ const {
   category,
 } = Astro.props as any;
 
-const site = Astro.site?.origin ?? "https://lnfguides.com";
+const site = Astro.site?.origin ?? "https://www.lnfguides.com";
 const url = canonical ?? new URL(Astro.url.pathname, site);
 const siteUrl = String(Astro.site ?? site);
 
+// OG-Fallback
 const ogFallbackByCategory: Record<string, string> = {
   dragons: "/images/og/dragons.png",
   beginners: "/images/og/beginners.png",
 };
 const finalOg = ogImage || ogFallbackByCategory[category] || "/images/og/default.png";
 
-const FC_PUBLISHER_ID = "pub-6618488631609364";   // <-- prüfe diese ID
-const ADSENSE_CLIENT   = "ca-pub-6618488631609364"; // <-- prüfe diese ID
+// IDs – prüfe beide
+const FC_PUBLISHER_ID = "pub-6618488631609364";
+const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
 ---
 
 <html lang="en" class="dark">
@@ -30,6 +32,7 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364"; // <-- prüfe diese ID
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <link rel="canonical" href={String(url)} />
+    <meta name="google-adsense-account" content={ADSENSE_CLIENT} />
 
     <title>{title ?? "LNF Guides"}</title>
     <meta name="description" content={description ?? "Guides & News"} />
@@ -85,7 +88,7 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364"; // <-- prüfe diese ID
       });
     </script>
 
-    <!-- gtag Proxy: spiegelt consent updates an __lnf_onGtag (ConsentBanner-Hook) -->
+    <!-- gtag-Proxy: leitet consent updates an den ConsentBanner-Hook -->
     <script>
       (function(){
         var _gtag = window.gtag;
@@ -103,15 +106,17 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364"; // <-- prüfe diese ID
     <!-- Funding Choices (CMP) -->
     <script async src={"https://fundingchoicesmessages.google.com/i/" + FC_PUBLISHER_ID + "?ers=1"}></script>
     <script>
-      // googlefcPresent-iframe sicher erzeugen (falls Script zu früh lädt)
+      // googlefcPresent-iframe sicher erzeugen (falls FC-Script race conditions hat)
       (function signalGooglefcPresent() {
         function inject(){
-          if (!window.frames['googlefcPresent']) {
-            const iframe = document.createElement('iframe');
-            iframe.style = 'width:0;height:0;border:0;display:none';
-            iframe.name = 'googlefcPresent';
-            document.body.appendChild(iframe);
-          }
+          try{
+            if (!window.frames['googlefcPresent']) {
+              const iframe = document.createElement('iframe');
+              iframe.style = 'width:0;height:0;border:0;display:none';
+              iframe.name = 'googlefcPresent';
+              document.body.appendChild(iframe);
+            }
+          }catch(e){}
         }
         if (document.readyState === 'loading') {
           document.addEventListener('DOMContentLoaded', inject, { once:true });
@@ -212,6 +217,7 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364"; // <-- prüfe diese ID
             id="open-search"
             class="w-full text-left border border-border/60 rounded-full px-4 py-2 text-text2 hover:bg-surface"
             aria-label="Open search (Cmd/Ctrl+K)"
+            type="button"
           >Press ⌘/Ctrl K to search…</button>
         </div>
 
@@ -221,7 +227,7 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364"; // <-- prüfe diese ID
           <a href="/updates/" class="hover:underline">Updates</a>
           <a href="/about/" class="hover:underline">About</a>
           <a href="/contact/" class="btn btn-primary">Subscribe</a>
-          <button class="underline hover:text-text" data-privacy-open>Privacy settings</button>
+          <button class="underline hover:text-text" data-privacy-open type="button" role="button" aria-label="Privacy settings">Privacy settings</button>
         </nav>
       </div>
     </header>
@@ -251,7 +257,7 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364"; // <-- prüfe diese ID
         </section>
         <section class="md:col-span-2">
           <h3 class="font-semibold mb-3">Controls</h3>
-          <button class="underline" data-privacy-open>Privacy settings</button>
+          <button class="underline" data-privacy-open type="button">Privacy settings</button>
         </section>
       </div>
       <div class="mx-auto max-w-7xl px-4 pb-10 text-xs text-text2">
@@ -259,57 +265,83 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364"; // <-- prüfe diese ID
       </div>
     </footer>
 
-    <!-- Privacy-Opener: bevorzugt Funding Choices, dann TCF, dann lokales UI -->
+    <!-- Search trigger -->
+    <script>
+      document.getElementById('open-search')?.addEventListener('click', () =>
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))
+      );
+    </script>
+
+    <!-- Opener: 1) Funding Choices, 2) TCF displayConsentUi, 3) lokales UI — mit Watchdog -->
     <script>
       (function(){
-        function tryOpenFundingChoices(){
+        function callWhenReady(fn, timeout){
+          var done = false;
+          var timer = setTimeout(function(){ if (!done) fn(false); }, timeout || 1500);
+          return function(ok){
+            if (!done){ done = true; clearTimeout(timer); fn(!!ok); }
+          };
+        }
+
+        function tryOpenFundingChoices(cb){
           try {
             window.googlefc = window.googlefc || {};
             window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
             window.googlefc.callbackQueue.push(function() {
-              if (typeof googlefc.showRevocationMessage === 'function') {
-                googlefc.showRevocationMessage(); return true;
-              }
-              return false;
+              try {
+                if (typeof googlefc.showRevocationMessage === 'function') {
+                  googlefc.showRevocationMessage();
+                  cb(true); return;
+                }
+              } catch(e){}
+              cb(false);
             });
-            return true;
-          } catch(e){ return false; }
+            // Falls FC noch nicht initialisiert ist, verarbeitet es die queue später
+          } catch(e){ cb(false); }
         }
-        function tryOpenTCF(){
-          try { if (typeof __tcfapi === 'function') { __tcfapi('displayConsentUi', 2, function(){}); return true; } } catch(e){}
-          return false;
+
+        function tryOpenTCF(cb){
+          try {
+            if (typeof __tcfapi === 'function') {
+              __tcfapi('displayConsentUi', 2, function(){});
+              cb(true); return;
+            }
+          } catch(e){}
+          cb(false);
         }
+
         function openPrivacy(){
-          // 1) Funding Choices Revocation Message (bevorzugt)
-          if (tryOpenFundingChoices()) return;
-          // 2) TCF UI direkt
-          if (tryOpenTCF()) return;
-          // 3) Dein lokales UI
-          if (window.consentUI && typeof window.consentUI.open === 'function') {
-            window.consentUI.open('settings'); return;
-          }
+          // 1) FC, wenn nicht sichtbar → 2) TCF, wenn nicht → 3) lokales UI
+          tryOpenFundingChoices(callWhenReady(function(fcOk){
+            if (fcOk) return;
+            tryOpenTCF(callWhenReady(function(tcfOk){
+              if (tcfOk) return;
+              if (window.consentUI && typeof window.consentUI.open === 'function') {
+                window.consentUI.open('settings');
+              }
+            }, 800));
+          }, 1200));
         }
+
         document.addEventListener('click', function(ev){
           const t = ev.target?.closest?.('[data-privacy-open]');
           if (!t) return;
           ev.preventDefault();
           openPrivacy();
         });
+
         window.managePrivacy = openPrivacy;
 
-        // Erstbesuch/Inkognito: Wenn kein TCF-String & keine Entscheidung → FC-Dialog automatisch zeigen
+        // Erstbesuch/Inkognito: FC → TCF → lokal automatisch anstoßen, wenn kein TCF-String
         window.addEventListener('load', function(){
           try {
             if (typeof __tcfapi === 'function') {
               __tcfapi('getTCData', 2, function(tcData, success){
-                if (!success || !tcData || !tcData.tcString) {
-                  // noch keine Wahl getroffen → Funding Choices öffnen
-                  tryOpenFundingChoices() || tryOpenTCF();
-                }
+                if (!success || !tcData || !tcData.tcString) openPrivacy();
               });
             } else {
-              // FC evtl. noch nicht bereit: kurzen Delay und dann versuchen
-              setTimeout(function(){ tryOpenFundingChoices() || tryOpenTCF(); }, 500);
+              // Falls __tcfapi noch nicht verfügbar: kurz warten, dann erneut versuchen
+              setTimeout(openPrivacy, 600);
             }
           } catch(e){}
         }, { once:true });
@@ -342,7 +374,7 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364"; // <-- prüfe diese ID
       })();
     </script>
 
-    <!-- AdSense: IMMER geladen; PA/NPA/LTD via Consent Mode/TCF -->
+    <!-- AdSense immer geladen; PA/NPA/LTD über Consent Mode/TCF -->
     <ConsentBanner />
   </body>
 </html>

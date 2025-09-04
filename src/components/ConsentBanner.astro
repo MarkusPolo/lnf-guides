@@ -6,12 +6,11 @@
  *   sondern ausschließlich über Funding Choices (TCF 2.2 + Consent Mode v2).
  * - Analytics & External embeds bleiben lokal steuerbar.
  * - Bridge: gtag('consent','update', ...) von Funding Choices → LS sync (ads, adsPersonalized).
- * - HINWEIS: Für Limited Ads laden wir den AdSense-Tag immer (siehe BaseLayout),
- *   Consent Mode/TCF entscheidet über PA/NPA/LTD.
+ * - Für Limited Ads wird der AdSense-Tag immer geladen (im BaseLayout).
  */
 const STORAGE_KEY = 'lnf-consent-1';
 const ALT_KEYS = ['lnf-consent-v1','lnf-consent'];
-const POLICY_VERSION = 2;
+const POLICY_VERSION = 2; // rechtstextliche Version deiner Policy
 ---
 
 <div
@@ -34,9 +33,9 @@ const POLICY_VERSION = 2;
         You can change your preferences anytime.
       </p>
       <div class="mt-4 flex flex-col md:flex-row gap-3">
-        <button id="btn-accept-all" class="btn btn-primary md:w-auto w-full">Accept all</button>
-        <button id="btn-reject-non" class="btn btn-outline md:w-auto w-full">Reject non-essential</button>
-        <button id="btn-open-settings" class="btn btn-outline md:ml-auto md:w-auto w-full">Customize</button>
+        <button id="btn-accept-all" class="btn btn-primary md:w-auto w-full" type="button">Accept all</button>
+        <button id="btn-reject-non" class="btn btn-outline md:w-auto w-full" type="button">Reject non-essential</button>
+        <button id="btn-open-settings" class="btn btn-outline md:ml-auto md:w-auto w-full" type="button">Customize</button>
       </div>
     </div>
 
@@ -69,7 +68,7 @@ const POLICY_VERSION = 2;
             <label for="c-external" class="font-semibold cursor-pointer">External embeds</label>
             <div class="text-sm text-text2">Loads external media (YouTube, Giscus, etc.).</div>
           </div>
-        <input id="c-external" type="checkbox" class="cursor-pointer" />
+          <input id="c-external" type="checkbox" class="cursor-pointer" />
         </div>
 
         <!-- Ads (managed by Google CMP) -->
@@ -81,7 +80,7 @@ const POLICY_VERSION = 2;
                 Managed via <strong>Google Funding Choices (CMP)</strong>. Use the button below to review or change your ad consent.
               </div>
             </div>
-            <button id="btn-open-gcmp" class="btn btn-outline">Open Google CMP</button>
+            <button id="btn-open-gcmp" class="btn btn-outline" type="button" role="button" aria-label="Open Google CMP">Open Google CMP</button>
           </div>
 
           <div class="mt-3 pl-6 border-l border-dashed border-border/60">
@@ -89,7 +88,7 @@ const POLICY_VERSION = 2;
               <div>
                 <div class="font-semibold">Personalized ads</div>
                 <div class="text-sm text-text2">
-                  Also managed via Google CMP. If not granted, non-personalized ads (NPA) or Limited Ads (LTD) will be requested automatically.
+                  Also managed via Google CMP. If not granted, Non-Personalized Ads (NPA) or Limited Ads (LTD) will be served automatically.
                 </div>
               </div>
               <span id="ads-status" class="text-xs text-text2 px-2 py-1 border rounded-card">—</span>
@@ -99,9 +98,9 @@ const POLICY_VERSION = 2;
       </div>
 
       <div class="flex items-center justify-between">
-        <button id="btn-back" class="btn btn-outline">Back</button>
+        <button id="btn-back" class="btn btn-outline" type="button">Back</button>
         <div class="flex gap-3">
-          <button id="btn-save" class="btn btn-primary">Save choices</button>
+          <button id="btn-save" class="btn btn-primary" type="button">Save choices</button>
         </div>
       </div>
     </div>
@@ -118,6 +117,7 @@ const POLICY_VERSION = 2;
   const policyVersion = Number(root.getAttribute('data-policy-version') || '2');
   const CONSENT_MAX_AGE_DAYS = 180;
 
+  // ---------- helpers ----------
   const defaults = () => ({
     version: 2,
     policyVersion,
@@ -149,6 +149,7 @@ const POLICY_VERSION = 2;
   function write(state){
     localStorage.setItem(PRIMARY_KEY, JSON.stringify(state));
     try { for (const k of ALT_KEYS) localStorage.removeItem(k); } catch {}
+    // Consent Mode spiegeln
     try {
       const dec = state.decisions;
       gtag('consent','update', {
@@ -157,7 +158,15 @@ const POLICY_VERSION = 2;
         ad_user_data: dec.adsPersonalized ? 'granted' : 'denied',
         ad_personalization: dec.adsPersonalized ? 'granted' : 'denied'
       });
+      // Hook für BaseLayout-Proxy
+      try { window.__lnf_onGtag && window.__lnf_onGtag(['consent','update', {
+        analytics_storage: dec.analytics ? 'granted' : 'denied',
+        ad_storage: dec.ads ? 'granted' : 'denied',
+        ad_user_data: dec.adsPersonalized ? 'granted' : 'denied',
+        ad_personalization: dec.adsPersonalized ? 'granted' : 'denied'
+      }]); } catch(e){}
     } catch {}
+    // App-Events
     const detail = { ...state.decisions };
     window.dispatchEvent(new CustomEvent('consent:changed', { detail }));
     window.dispatchEvent(new Event('consent:updated'));
@@ -183,6 +192,7 @@ const POLICY_VERSION = 2;
     return s.policyVersion === policyVersion && ageDays <= CONSENT_MAX_AGE_DAYS;
   }
 
+  // ---------- UI refs ----------
   const banner = document.getElementById('consent-banner');
   const settings = document.getElementById('consent-settings');
   const btnAcceptAll = document.getElementById('btn-accept-all');
@@ -209,21 +219,28 @@ const POLICY_VERSION = 2;
       : 'Ads: Disallowed';
   }
 
+  // ---------- Funding Choices bridge & opener ----------
   function openGoogleCMP(){
+    // Bevorzugt: TCF-API UI
     try { if (typeof __tcfapi === 'function') { __tcfapi('displayConsentUi', 2, function(){}); return; } } catch {}
+    // Alternativ: Revocation-Message (wenn verfügbar)
     try {
       window.googlefc = window.googlefc || {};
       window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
       window.googlefc.callbackQueue.push(function(){
         if (typeof googlefc.showRevocationMessage === 'function') {
           googlefc.showRevocationMessage();
+        } else {
+          // Fallback, falls weder TCF noch Revocation verfügbar ist
+          showSettings();
         }
       });
-      return;
-    } catch {}
-    showSettings();
+    } catch {
+      showSettings();
+    }
   }
 
+  // Spiegelt Consent Mode -> lokale LS-Entscheidungen für Ads
   function syncAdsFromConsentMode(p){
     if (!p) return;
     const ads = p.ad_storage === 'granted';
@@ -236,6 +253,7 @@ const POLICY_VERSION = 2;
     }
   }
 
+  // Hooke in gtag-Proxy (BaseLayout)
   (function hookGtag(){
     const prev = window.__lnf_onGtag;
     window.__lnf_onGtag = function(args){
@@ -246,14 +264,17 @@ const POLICY_VERSION = 2;
     };
   })();
 
+  // ---------- Interactions ----------
   btnAcceptAll?.addEventListener('click', () => {
     set({ analytics:true, external:true });
+    // Öffne zusätzlich Google CMP für Ads-Opt-in
     openGoogleCMP();
     hideRoot();
   });
 
   btnRejectNon?.addEventListener('click', () => {
     set({ analytics:false, external:false, ads:false, adsPersonalized:false });
+    // Optional: CMP öffnen, damit Nutzer Ads explizit verwalten kann
     openGoogleCMP();
     hideRoot();
   });
@@ -264,15 +285,18 @@ const POLICY_VERSION = 2;
     set({
       analytics: !!(cAnalytics && cAnalytics.checked),
       external:  !!(cExternal  && cExternal.checked)
+      // Ads/Personalized werden absichtlich NICHT hier gespeichert – dafür Google CMP benutzen
     });
     hideRoot();
   });
 
   btnOpenGCMP?.addEventListener('click', (e) => { e.preventDefault(); openGoogleCMP(); });
 
+  // Backdrop & Escape nur schließen, wenn schon entschieden
   root.addEventListener('click', (e) => { if (e.target === root && decided()) hideRoot(); });
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && decided()) hideRoot(); });
 
+  // Globale UI-API
   window.consentUI = {
     open: (mode) => {
       if (mode === 'ads') { openGoogleCMP(); return; }
@@ -281,9 +305,9 @@ const POLICY_VERSION = 2;
     },
     close: hideRoot
   };
-
   window.addEventListener('consent:open', () => { window.consentUI.open('settings'); });
 
+  // ---------- Initial sync ----------
   (function initialSync(){
     const s = normalize(readAny());
     try {
@@ -299,6 +323,7 @@ const POLICY_VERSION = 2;
     if (!decided()) showBanner();
   })();
 
+  // Delegation: jedes [data-privacy-open] öffnet Einstellungen / CMP
   document.addEventListener('click', (ev) => {
     const t = ev.target?.closest?.('[data-privacy-open]');
     if (t) { ev.preventDefault(); window.consentUI.open('settings'); }
