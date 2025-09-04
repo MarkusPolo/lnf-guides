@@ -48,6 +48,30 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
     <meta name="twitter:image" content={finalOg} />
     <link rel="icon" href="/images/logo.svg" type="image/svg+xml" />
 
+    <!-- FC present iframe: muss vor FC-Skript garantiert existieren -->
+    <script>
+    (function ensureGooglefcPresent(){
+      function inject(){
+        try{
+          if (!window.frames || window.frames['googlefcPresent']) return;
+          var f=document.createElement('iframe');
+          f.name='googlefcPresent';
+          f.style='width:0;height:0;border:0;display:none';
+          document.body ? document.body.appendChild(f)
+                        : document.addEventListener('DOMContentLoaded', function(){ 
+                            try{ document.body.appendChild(f); }catch(e){}
+                          }, {once:true});
+        }catch(e){}
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', inject, {once:true});
+      } else {
+        inject();
+      }
+    })();
+    </script>
+
+
     <!-- JSON-LD: WebSite -->
     <script type="application/ld+json">
       {JSON.stringify({
@@ -217,6 +241,116 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
 
     <!-- AdSense: IMMER laden (PA/NPA/LTD via Consent Mode + TCF-String) -->
     <script async src={"https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + ADSENSE_CLIENT} crossOrigin="anonymous"></script>
+    <script>
+      (function(){
+        var OPEN_TIMEOUT_MS = 8000; // etwas großzügiger
+        function openLocal(){ try{ window.consentUI?.open('settings'); }catch(e){} }
+
+        function tryFC(cb){
+          try {
+            window.googlefc = window.googlefc || {};
+            window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
+            window.googlefc.callbackQueue.push(function(){
+              try{
+                if (typeof googlefc.showRevocationMessage === 'function') {
+                  googlefc.showRevocationMessage();
+                  cb(true); return;
+                }
+              }catch(e){}
+              cb(false);
+            });
+          } catch(e){ cb(false); }
+        }
+
+        function tryTCF(cb){
+          try{
+            if (typeof __tcfapi === 'function') {
+              // Wichtig: echte TC-String prüfen
+              __tcfapi('getTCData', 2, function(data, success){
+                if (success && data && data.tcString && data.tcString.length > 10) {
+                  cb(true); // es existiert schon ein Consent-Record → nicht öffnen
+                } else {
+                  // UI anzeigen
+                  try { __tcfapi('displayConsentUi', 2, function(){}); } catch(e){}
+                  cb(true); // wir haben versucht, die UI zu öffnen
+                }
+              });
+              return;
+            }
+          }catch(e){}
+          cb(false);
+        }
+
+        function openPrivacy(){
+          var done=false;
+          var t=setTimeout(function(){ if(!done){ done=true; openLocal(); }}, OPEN_TIMEOUT_MS);
+          function finish(ok){ if(!done){ done=true; clearTimeout(t); if(!ok) openLocal(); } }
+
+          // 1) Versuche FC
+          tryFC(function(fcOk){
+            if (fcOk) return finish(true);
+            // 2) Versuche TCF
+            tryTCF(function(tcfOk){
+              if (tcfOk) return finish(true);
+              // 3) Fallback lokal
+              finish(false);
+            });
+          });
+        }
+
+        // Klick-Handler
+        document.addEventListener('click', function(ev){
+          var t = ev.target && ev.target.closest && ev.target.closest('[data-privacy-open]');
+          if (!t) return;
+          ev.preventDefault();
+          openPrivacy();
+        });
+
+        // Auto-open bei Erstbesuch, wenn es KEINE TC-String gibt
+        window.addEventListener('load', function(){
+          var tried=false;
+          function attempt(){
+            if (tried) return; tried=true;
+            if (typeof __tcfapi === 'function') {
+              try {
+                __tcfapi('getTCData', 2, function(data, success){
+                  if (!success || !data || !data.tcString) openPrivacy();
+                });
+              } catch(e){ openPrivacy(); }
+            } else {
+              openPrivacy();
+            }
+          }
+          setTimeout(attempt, 400); // kurz nach onload
+        }, { once:true });
+
+        // Für globale Nutzung
+        window.managePrivacy = openPrivacy;
+      })();
+      </script>
+      <script>
+        (function(){
+          // Logge, ob FC initialisiert
+          window.googlefc = window.googlefc || {};
+          window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
+          window.googlefc.callbackQueue.push(function(){
+            console.log('[FC] initialized:', typeof googlefc.showRevocationMessage === 'function');
+          });
+
+          // Logge TCF
+          var tm = setInterval(function(){
+            if (typeof __tcfapi === 'function') {
+              console.log('[TCF] __tcfapi available');
+              __tcfapi('getTCData', 2, function(tc, ok){
+                console.log('[TCF] getTCData ok=%o tcString=%o', ok, tc && tc.tcString);
+              });
+              clearInterval(tm);
+            }
+          }, 500);
+        })();
+      </script>
+
+
   </head>
 
   <body class="font-sans bg-bg text-text">
