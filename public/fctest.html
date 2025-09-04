@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FC Test</title>
+
+<!-- Consent Mode default -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('consent', 'default', {
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    analytics_storage: 'denied',
+    wait_for_update: 500
+  });
+</script>
+
+<!-- googlefcPresent: früh garantieren -->
+<script>
+(function(){
+  function inject(){
+    try{
+      if (!window.frames['googlefcPresent']) {
+        const f = document.createElement('iframe');
+        f.name = 'googlefcPresent';
+        f.style = 'width:0;height:0;border:0;display:none';
+        document.body.appendChild(f);
+      }
+    }catch(e){}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inject, {once:true});
+  } else {
+    inject();
+  }
+})();
+</script>
+
+<!-- Funding Choices (CMP) -->
+<script async src="https://fundingchoicesmessages.google.com/i/pub-6618488631609364?ers=1"></script>
+
+<style>
+  body { font-family: ui-sans-serif, system-ui; padding: 24px; }
+  button { padding: 8px 12px; margin-right: 8px; }
+</style>
+</head>
+<body>
+  <h1>Funding Choices Test</h1>
+  <p>Buttons versuchen die CMP zu öffnen:</p>
+  <button onclick="tryTCF()">displayConsentUi()</button>
+  <button onclick="tryRevocation()">showRevocationMessage()</button>
+  <pre id="log" style="white-space:pre-wrap;background:#f5f5f5;padding:12px;border-radius:8px;"></pre>
+
+<script>
+const log = (...a) => { console.log(...a); document.getElementById('log').textContent += a.map(x=>typeof x==='string'?x:JSON.stringify(x)).join(' ')+'\n'; };
+
+function tryTCF(){
+  if (typeof __tcfapi === 'function') {
+    __tcfapi('displayConsentUi', 2, function(){ log('[TCF] displayConsentUi called'); });
+    setTimeout(()=>__tcfapi('getTCData', 2, (d, ok) => log('[TCF] after call ok=', ok, ' tcString=', d && d.tcString)), 1500);
+  } else {
+    log('[TCF] __tcfapi missing');
+  }
+}
+
+function tryRevocation(){
+  window.googlefc = window.googlefc || {};
+  window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
+  window.googlefc.callbackQueue.push(function(){
+    const ok = typeof googlefc.showRevocationMessage === 'function';
+    log('[FC] initialized=', ok);
+    if (ok) googlefc.showRevocationMessage();
+  });
+}
+</script>
+</body>
+</html>
