@@ -13,9 +13,9 @@ const canonical = new URL('/privacy/', Astro.site!);
 
     <h2>1. Controller</h2>
     <p>
-      [[Name/Company]]<br/>
-      [[Street, ZIP City, Country]]<br/>
-      Email: <a href="mailto:[[contact@example.com]]">[[contact@example.com]]</a>
+      Marius Morgenstern<br/>
+      Malterstr. 9, 01159 Dresden, Germany<br/>
+      Email: <a href="mailto:business.tryonai@gmail.com">business.tryonai@gmail.com</a>
     </p>
 
     <h2>2. General information on data processing</h2>
@@ -33,31 +33,35 @@ const canonical = new URL('/privacy/', Astro.site!);
     </ul>
 
     <h2>3. Hosting & delivery</h2>
-    <p>The website is hosted and delivered by [[Host/CDN, e.g., Vercel/Netlify/Cloudflare]]. Server-side logs (e.g., IP address, timestamp, user agent) may be processed to provide the site and ensure security.</p>
+    <p>The website is hosted and delivered by Vercel. Server-side logs (e.g., IP address, timestamp, user agent) may be processed to provide the site and ensure security.</p>
     <ul>
       <li><strong>Legal basis:</strong> Art. 6(1)(f) GDPR (legitimate interest in secure and efficient delivery)</li>
-      <li><strong>Recipient:</strong> [[Host/CDN]] (processor). A data processing agreement (DPA) is in place.</li>
-      <li><strong>Retention:</strong> according to the host’s policy [[e.g., 7–30 days]]</li>
+      <li><strong>Recipient & role:</strong> Vercel Inc. — <em>processor</em>. A data processing agreement (DPA) is in place. See <a href="https://vercel.com/legal/dpa">https://vercel.com/legal/dpa</a></li>
+      <li><strong>Retention:</strong> according to the host’s policy for the <em>minimum necessary duration</em></li>
     </ul>
 
-    <h2>4. Web analytics (Plausible)</h2>
-    <p>We use Plausible Analytics. The script is only loaded if you allow <em>Analytics</em>. Plausible uses no cookies and collects aggregated usage data (page views, referrers, coarse browser/device data). IP addresses are shortened/hashed.</p>
+    <h2>4. Web analytics (Vercel Analytics)</h2>
+    <p>We use Vercel Analytics. The script is only loaded if you allow <em>Analytics</em>. Vercel uses no cookies and collects aggregated usage data (page views, referrers, coarse browser/device data). IP addresses are shortened/hashed.</p>
     <ul>
-      <li><strong>Service:</strong> Plausible Insights OÜ, Västriku tn 2, 50403 Tartu, Estonia</li>
+      <li><strong>Service:</strong> Vercel Inc., Avenue Huart Hamoir 71, 1030 Brussels, Belgium, privacy@vercel.com</li>
+      <li><strong>Role:</strong> processor (on our behalf)</li>
       <li><strong>Legal basis:</strong> Art. 6(1)(a) GDPR (consent)</li>
-      <li><strong>Transfer:</strong> EU/EEA (according to the provider). A DPA with Plausible is in place.</li>
+      <li><strong>Transfer:</strong> EU/EEA/USA (according to the provider). A DPA with Vercel is in place.</li>
       <li><strong>Opt-out/withdrawal:</strong> at any time via <em>Privacy settings</em> or /privacy</li>
     </ul>
 
     <h2>5. Advertising (Google AdSense)</h2>
-    <p>Ads are loaded only if you allow <em>Ads</em>. Personalization is used only if you additionally allow <em>Personalized ads</em>. Without personalization, non-personalized ads (NPA) are requested.</p>
+    <p>Ads are loaded only if you allow <em>Ads</em>. Personalization is used only if you additionally allow <em>Personalized ads</em>. Google will use among others Usage Data, Geo Data, Interests Profiles. Without personalization, non-personalized ads (NPA) are requested.</p>
     <ul>
       <li><strong>Service:</strong> Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Ireland</li>
-      <li><strong>Legal basis:</strong> Art. 6(1)(a) GDPR (consent); German TTDSG § 25(1) where applicable</li>
+      <li><strong>Role:</strong> independent controller</li>
+      <li><strong>Legal basis:</strong> Art. 6(1)(a) GDPR (consent); where storage/access to end-device information is involved: § 25(1) TTDSG</li>
       <li><strong>Technology:</strong> IAB TCF 2.2 + Google Consent Mode v2 (ad_storage, ad_user_data, ad_personalization)</li>
-      <li><strong>Third-country transfer:</strong> possible to the USA; legal basis: EU-US Data Privacy Framework and/or SCCs</li>
-      <li><strong>Withdrawal:</strong> at any time via <em>Privacy settings</em> or /privacy</li>
+      <li><strong>Processing:</strong> use of usage data, coarse geo data, and interest profiles for <em>profiling</em> to deliver personalized ads; no solely automated decisions by us producing legal effects.</li>
+      <li><strong>Third-country transfer:</strong> possible to the USA; safeguards: EU-US Data Privacy Framework and/or SCCs (per Google).</li>
+      <li><strong>Controls:</strong> withdraw consent anytime via <em>Privacy settings</em>; see also Google’s <a href="https://policies.google.com/technologies/ads">Ads & Privacy</a> and <a href="https://adssettings.google.com/">Ad Settings</a>.</li>
     </ul>
+
 
     <h2>6. External embeds</h2>
 
@@ -65,6 +69,8 @@ const canonical = new URL('/privacy/', Astro.site!);
     <p>Videos load only after you consent to <em>External embeds</em>. We use the domain <code>youtube-nocookie.com</code>, which transmits data to YouTube only when playing the video.</p>
     <ul>
       <li><strong>Service:</strong> Google Ireland Limited (YouTube)</li>
+      <li><strong>Role:</strong> independent controller</li>
+      <li><strong>Privacy policy:</strong> YouTube/Google: <a href="https://policies.google.com/privacy">Privacy Policy</a> </li>
       <li><strong>Legal basis:</strong> Art. 6(1)(a) GDPR (consent)</li>
       <li><strong>Third-country transfer:</strong> possible to the USA; see Google section</li>
     </ul>
@@ -73,12 +79,14 @@ const canonical = new URL('/privacy/', Astro.site!);
     <p>Comments are embedded via Giscus and load only after you consent to <em>External embeds</em>. When interacting, data may be transmitted to GitHub.</p>
     <ul>
       <li><strong>Service:</strong> GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA</li>
+      <li><strong>Role:</strong> independent controller</li>
+      <li><strong>Privacy policy:</strong> Github: <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">Privacy</a></li>
       <li><strong>Legal basis:</strong> Art. 6(1)(a) GDPR (consent)</li>
       <li><strong>Third-country transfer:</strong> to the USA; appropriate safeguards (DPF/SCC) according to the provider</li>
     </ul>
 
     <h2>7. Cookies and similar technologies</h2>
-    <p>Essential technologies (required for operation) are always active. Non-essential technologies (analytics, ads, external embeds) are activated only with your consent. You can change your choices at any time.</p>
+    <p>Essential technologies (required for operation) are always active (legal basis: Art. 6(1)(f) GDPR; for end-device storage/access: § 25(2) TTDSG). Non-essential technologies (analytics, ads, external embeds) are activated only with your consent. You can change your choices at any time.</p>
 
     <h2>8. Your rights</h2>
     <ul>
@@ -89,8 +97,10 @@ const canonical = new URL('/privacy/', Astro.site!);
       <li>Data portability (Art. 20 GDPR)</li>
       <li>Objection (Art. 21 GDPR, where applicable)</li>
       <li>Withdrawal of consent (Art. 7(3) GDPR)</li>
-      <li>Complaint with a supervisory authority (Art. 77 GDPR)</li>
+      <li>Complaint with a supervisory authority (Art. 77 GDPR), e.g., the competent state authority in Saxony, or any other competent authority in the EU/EEA.</li>
     </ul>
+
+    <p>To exercise your rights, contact: <a href="mailto:business.tryonai@gmail.com">business.tryonai@gmail.com</a>. We may request information to verify your identity.</p>
 
     <h2>9. Manage your choices</h2>
     <section class="card p-4 md:p-5 mb-6 not-prose">

@@ -24,6 +24,7 @@ const finalOg = ogImage || ogFallbackByCategory[category] || "/images/og/default
 
 // IDs / Domains
 const FC_PUBLISHER_ID = "pub-6618488631609364";
+const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
 ---
 
 <html lang="en" class="dark">
@@ -73,7 +74,7 @@ const FC_PUBLISHER_ID = "pub-6618488631609364";
       })}
     </script>
 
-    <!-- Google tag (Consent Mode v2, ohne GA) – nur Stub + Default denied -->
+    <!-- Google tag (Consent Mode v2, ohne GA) – Default denied -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){ dataLayer.push(arguments); }
@@ -86,7 +87,22 @@ const FC_PUBLISHER_ID = "pub-6618488631609364";
       });
     </script>
 
-    <!-- LNF Consent Bridge: EINZIGE Quelle fürs Gating = LS / window.consent -->
+    <!-- gtag Proxy: spiegelt consent updates an __lnf_onGtag (ConsentBanner-Hook) -->
+    <script>
+      (function(){
+        var _gtag = window.gtag;
+        window.gtag = function(){
+          try {
+            if (arguments && arguments[0] === 'consent' && arguments[1] === 'update') {
+              try { window.__lnf_onGtag && window.__lnf_onGtag(arguments); } catch(e){}
+            }
+          } catch(e){}
+          return _gtag && _gtag.apply(this, arguments);
+        };
+      })();
+    </script>
+
+    <!-- LNF Consent Bridge: EINZIGE Quelle fürs Gating = Consent-Record -->
     <script>
       (function(){
         var LS_KEYS = ['lnf-consent-1','lnf-consent-v1','lnf-consent'];
@@ -133,14 +149,14 @@ const FC_PUBLISHER_ID = "pub-6618488631609364";
         // Cross-Tab Sync
         window.addEventListener('storage', function(ev){
           if (!ev || !ev.key) return;
-          if (LS_KEYS.includes(ev.key) || ev.key==='lnf-external-embeds') emit();
+          if (LS_KEYS.includes(ev.key)) emit();
         });
         // Sofort initial auslösen
         emit();
       })();
     </script>
 
-    <!-- Funding Choices (CMP) – echte ID erst nach Launch -->
+    <!-- Funding Choices (CMP) -->
     <script async src={"https://fundingchoicesmessages.google.com/i/" + FC_PUBLISHER_ID + "?ers=1"}></script>
     <script>
       (function() {
@@ -164,8 +180,6 @@ const FC_PUBLISHER_ID = "pub-6618488631609364";
     <script id="vercel-analytics-loader">
       (function(){
         var loaded = false;
-
-        // Optional: Queue für Custom Events (kompatibel zur Vercel-Doku)
         window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments); };
 
         function allowed(){
@@ -184,25 +198,17 @@ const FC_PUBLISHER_ID = "pub-6618488631609364";
           document.head.appendChild(s);
         }
 
-        // 1) Sofort prüfen
         if (allowed()) load();
-
-        // 2) Auf Bridge-Callbacks reagieren
         try { window.lnfConsent && window.lnfConsent.on(function(d){ if (d && d.analytics) load(); }); } catch(e){}
-
-        // 3) Auf deine Custom-Events reagieren (falls das Banner sie feuert)
         window.addEventListener('consent:changed', function(ev){ if (ev?.detail?.analytics) load(); }, { passive: true });
-        window.addEventListener('consent:updated', function(){ if (allowed()) load(); }, { passive: true });
 
-        // 4) Race-Fix: nach DOMContentLoaded und im Microtask erneut prüfen
         document.readyState === 'loading'
           ? document.addEventListener('DOMContentLoaded', function(){ if (allowed()) load(); }, { once:true })
           : Promise.resolve().then(function(){ if (allowed()) load(); });
 
-        // 5) Manuell auslösbar zu Testzwecken
         window.__va_forceLoad = function(){ loaded=false; load(); };
       })();
-      </script>
+    </script>
   
   </head>
   <body class="font-sans bg-bg text-text">
@@ -294,17 +300,28 @@ const FC_PUBLISHER_ID = "pub-6618488631609364";
       })();
     </script>
 
-    <!-- Externe Embeds: lokale Einstellung + standardisierte Events -->
+    <!-- Externe Embeds: lokale Einstellung ↔ Consent-Record synchron halten -->
     <script>
       (function(){
         window.lnfExternal = {
-          get(){ try { return !!JSON.parse(localStorage.getItem('lnf-external-embeds')||'false'); } catch { return false; } },
+          get(){
+            try {
+              // Primär Consent-Record
+              var via = window.consent && typeof window.consent.get==='function' ? window.consent.get() : null;
+              if (via && typeof via.external==='boolean') return !!via.external;
+            } catch(e){}
+            // Fallback: historischer Key (nicht mehr führend)
+            try { return !!JSON.parse(localStorage.getItem('lnf-external-embeds')||'false'); } catch { return false; }
+          },
           set(v){
-            try { localStorage.setItem('lnf-external-embeds', JSON.stringify(!!v)); } catch {}
-            // Bridge informiert automatisch via 'storage' und emit()
+            var val = !!v;
+            // Consent-Record ist führend
+            try { window.consent?.set?.({ external: val }); } catch(e){}
+            // Historischen Key mitschreiben für Alt-Komponenten
+            try { localStorage.setItem('lnf-external-embeds', JSON.stringify(val)); } catch {}
             try {
               var d = (window.lnfConsent && window.lnfConsent.get && window.lnfConsent.get()) || {};
-              var detail = { analytics:!!d.analytics, ads:!!d.ads, adsPersonalized:!!d.adsPersonalized, external:!!v };
+              var detail = { analytics:!!d.analytics, ads:!!d.ads, adsPersonalized:!!d.adsPersonalized, external:val };
               window.dispatchEvent(new CustomEvent('consent:changed', { detail }));
               window.dispatchEvent(new Event('consent:updated'));
             } catch(e){}
@@ -313,7 +330,29 @@ const FC_PUBLISHER_ID = "pub-6618488631609364";
       })();
     </script>
 
-    <!-- Banner am Ende mounten (setzt Consent Mode für Google, aber Gating läuft über Bridge) -->
+    <!-- AdSense: lädt NUR nach Opt-in (lnfConsent.ads) -->
+    <script>
+      (function(){
+        var loaded = false;
+        function adsAllowed(){
+          try { return !!(window.lnfConsent && window.lnfConsent.allowed('ads')); } catch(e){ return false; }
+        }
+        function loadAdSense(){
+          if (loaded || !adsAllowed()) return;
+          loaded = true;
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent({ADSENSE_CLIENT});
+          s.crossOrigin = 'anonymous';
+          document.head.appendChild(s);
+        }
+        if (adsAllowed()) loadAdSense();
+        try { window.lnfConsent && window.lnfConsent.on(function(d){ if (d && d.ads) loadAdSense(); }); } catch(e){}
+        window.addEventListener('consent:changed', function(ev){ if (ev?.detail?.ads) loadAdSense(); }, { passive:true });
+      })();
+    </script>
+
+    <!-- Banner am Ende mounten -->
     <ConsentBanner />
   </body>
 </html>

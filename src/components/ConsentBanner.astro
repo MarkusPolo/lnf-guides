@@ -17,13 +17,16 @@ const POLICY_VERSION = 2;
   class="fixed inset-0 z-[2000] hidden"
   data-storage-key={STORAGE_KEY}
   data-policy-version={String(POLICY_VERSION)}
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="consent-banner-title"
   aria-hidden="true"
 >
   <div class="absolute inset-0 bg-black/70"></div>
   <div class="relative z-[1] mx-auto mt-16 w-[min(680px,calc(100%-2rem))] rounded-card border border-border/60 bg-[#111624] shadow-soft">
     <!-- Banner -->
     <div id="consent-banner" class="p-4 md:p-5">
-      <h2 class="text-xl font-semibold mb-2">Privacy Preferences</h2>
+      <h2 id="consent-banner-title" class="text-xl font-semibold mb-2">Privacy Preferences</h2>
       <p class="text-sm text-text2">
         We use cookies and similar technologies to provide essential functionality. With your consent, we also use analytics, external embeds (e.g., YouTube, Giscus) and ads.
         You can change your preferences anytime.
@@ -53,7 +56,7 @@ const POLICY_VERSION = 2;
         <div class="flex items-start justify-between gap-3 p-3 rounded-card border border-border/60 bg-[#0f1422]">
           <div>
             <label for="c-analytics" class="font-semibold cursor-pointer">Analytics</label>
-            <div class="text-sm text-text2">Anonymous usage statistics (Plausible).</div>
+            <div class="text-sm text-text2">Anonymous usage statistics (Vercel Web Analytics).</div>
           </div>
           <input id="c-analytics" type="checkbox" class="cursor-pointer" />
         </div>
@@ -145,7 +148,7 @@ const POLICY_VERSION = 2;
   function write(state){
     localStorage.setItem(PRIMARY_KEY, JSON.stringify(state));
     try { for (const k of ALT_KEYS) localStorage.removeItem(k); } catch {}
-    // set Consent Mode for Google (keine UI-Entscheidung hier, nur Spiegelung)
+    // Google Consent Mode spiegeln (nur Spiegelung; FC bleibt Quelle für Ads)
     try {
       const dec = state.decisions;
       gtag('consent','update', {
@@ -155,8 +158,8 @@ const POLICY_VERSION = 2;
         ad_personalization: dec.adsPersonalized ? 'granted' : 'denied'
       });
     } catch {}
-    // Events für App
-    const detail = { ...state.decisions, external: !!JSON.parse(localStorage.getItem('lnf-external-embeds')||'false') };
+    // Events für App (einheitlich: nur state.decisions)
+    const detail = { ...state.decisions };
     window.dispatchEvent(new CustomEvent('consent:changed', { detail }));
     window.dispatchEvent(new Event('consent:updated'));
   }
@@ -234,17 +237,15 @@ const POLICY_VERSION = 2;
     if (!p) return;
     const ads = p.ad_storage === 'granted';
     const personalized = (p.ad_user_data === 'granted') && (p.ad_personalization === 'granted');
-    // nur schreiben, wenn sich Ads-Felder ändern → vermeidet Loops
     const s = normalize(readAny());
     if (s.decisions.ads !== ads || s.decisions.adsPersonalized !== personalized) {
       set({ ads, adsPersonalized: personalized });
     } else {
-      // trotzdem Status-Badge anpassen
       fillSettingsFromState();
     }
   }
 
-  // Hooke dich in den gtag-Stub ein (BaseLayout ruft window.__lnf_onGtag(...) beim consent update)
+  // Hooke dich in den gtag-Proxy ein (BaseLayout patched gtag → __lnf_onGtag)
   (function hookGtag(){
     const prev = window.__lnf_onGtag;
     window.__lnf_onGtag = function(args){
@@ -259,14 +260,15 @@ const POLICY_VERSION = 2;
   btnAcceptAll?.addEventListener('click', () => {
     // Lokal alles erlauben (Analytics + External). Ads/Personalized kommen über Google CMP-Flow.
     set({ analytics:true, external:true });
-    // Öffne zusätzlich Google CMP für Ads-Opt-In (Best Practice)
+    // Zusätzlich Google CMP öffnen für Ads-Opt-In (Best Practice)
     openGoogleCMP();
     hideRoot();
   });
 
   btnRejectNon?.addEventListener('click', () => {
-    // Lokal alles aus; Ads werden über CMP ohnehin „denied“, aber wir spiegeln es lokal
+    // Lokal alles aus; Ads werden über CMP widerrufen/justiert
     set({ analytics:false, external:false, ads:false, adsPersonalized:false });
+    openGoogleCMP();
     hideRoot();
   });
 
@@ -285,6 +287,8 @@ const POLICY_VERSION = 2;
 
   // Backdrop: nur schließen, wenn entschieden
   root.addEventListener('click', (e) => { if (e.target === root && decided()) hideRoot(); });
+  // ESC: nur schließen, wenn entschieden
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && decided()) hideRoot(); });
 
   // Globale UI-API
   window.consentUI = {
@@ -295,6 +299,11 @@ const POLICY_VERSION = 2;
     },
     close: hideRoot
   };
+
+  // Öffnen über consent.ts-API
+  window.addEventListener('consent:open', () => {
+    window.consentUI.open('settings');
+  });
 
   // ---------- Initial sync ----------
   (function initialSync(){

@@ -1,8 +1,8 @@
 // src/lib/consent.ts
-// src/lib/consent.ts
 export const CONSENT_KEY = 'lnf-consent-1'; // statt 'lnf-consent-v1'
 export const CONSENT_VERSION = 2;   // technische Banner-Version (UI/Logik)
 export const POLICY_VERSION = 2;    // rechtstextliche Version (neuer Zweck: personalized ads)
+const MAX_AGE_DAYS = 180;
 
 export type ConsentDecisions = {
   analytics: boolean;
@@ -77,12 +77,15 @@ export function savePartial(partial: Partial<ConsentDecisions>) {
 
 export function decided(): boolean {
   const r = read();
-  return r.ts > 0 && r.policyVersion === POLICY_VERSION;
+  if (!r.ts || r.policyVersion !== POLICY_VERSION) return false;
+  const ageDays = (Date.now() - r.ts) / (1000*60*60*24);
+  return ageDays <= MAX_AGE_DAYS;
 }
 
 export function needsRenewal(): boolean {
   const r = read();
-  return r.version !== CONSENT_VERSION || r.policyVersion !== POLICY_VERSION;
+  const ageDays = r.ts ? (Date.now() - r.ts) / (1000*60*60*24) : Infinity;
+  return r.version !== CONSENT_VERSION || r.policyVersion !== POLICY_VERSION || ageDays > MAX_AGE_DAYS;
 }
 
 export function openManager() {

@@ -13,9 +13,9 @@ const canonical = new URL('/privacy/', Astro.site!);
 
     <h2>1. Verantwortlicher</h2>
     <p>
-      [[Name/Firma]]<br/>
-      [[Straße, PLZ Ort, Land]]<br/>
-      E-Mail: <a href="mailto:[[kontakt@example.com]]">[[kontakt@example.com]]</a>
+      Marius Morgenstern<br/>
+      Malterstr. 9, 01159 Dresden, Germany<br/>
+      E-Mail: <a href="mailto:business.tryonai@gmail.com">business.tryonai@gmail.com</a>
     </p>
 
     <h2>2. Allgemeines zur Datenverarbeitung</h2>
@@ -24,7 +24,7 @@ const canonical = new URL('/privacy/', Astro.site!);
     <h3>2.1 Einwilligungs-Management (CMP)</h3>
     <p>
       Wir verwenden ein Einwilligungs-Management (Consent Management Platform, CMP), um nicht-essentielle Technologien erst nach deiner Einwilligung zu laden.
-      Du kannst deine Auswahl jederzeit ändern über den Button <em>„Datenschutzeinstellungen“</em> oder die Seite <a href="/privacy/">/privacy/</a>.
+      Du kannst deine Auswahl jederzeit ändern über den Button <em>Privacy Settings</em> oder die Seite <a href="/privacy/">/privacy/</a>.
     </p>
     <ul>
       <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs.1 lit. a DSGVO</li>
@@ -33,31 +33,36 @@ const canonical = new URL('/privacy/', Astro.site!);
     </ul>
 
     <h2>3. Hosting & Auslieferung</h2>
-    <p>Die Website wird bei [[Hoster/CDN, z.&nbsp;B. Vercel/Netlify/Cloudflare]] gehostet und ausgeliefert. Dabei werden serverseitige Logdaten (z. B. IP-Adresse, Zeitpunkt, User-Agent) verarbeitet, um die Auslieferung und Sicherheit zu gewährleisten.</p>
+    <p>Die Website wird bei Vercel gehostet und ausgeliefert. Dabei werden serverseitige Logdaten (z. B. IP-Adresse, Zeitpunkt, User-Agent) verarbeitet, um die Auslieferung und Sicherheit zu gewährleisten.</p>
     <ul>
-      <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs.1 lit. f DSGVO (berechtigtes Interesse an sicherer und effizienter Bereitstellung)</li>
-      <li><strong>Empfänger:</strong> [[Hoster/CDN]] (Auftragsverarbeiter). Ein entsprechender Auftragsverarbeitungsvertrag (AVV/DPA) wurde abgeschlossen.</li>
-      <li><strong>Speicherdauer:</strong> gemäß den Richtlinien des Hosters [[z. B. 7–30 Tage]]</li>
+      <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an sicherer und effizienter Bereitstellung)</li>
+      <li><strong>Empfänger & Rolle:</strong> Vercel Inc. — <em>Auftragsverarbeiter</em>. Ein Auftragsverarbeitungsvertrag (AVV/DPA) wurde abgeschlossen (<a href="https://vercel.com/legal/dpa">https://vercel.com/legal/dpa</a>).</li>
+      <li><strong>Speicherdauer:</strong> gemäß den Richtlinien des Hosters für die <em>minimale notwendige Dauer</em></li>
     </ul>
 
-    <h2>4. Webanalyse (Plausible)</h2>
-    <p>Wir verwenden Plausible Analytics. Das Skript wird nur geladen, wenn du <em>Analytics</em> zulässt. Plausible arbeitet ohne Cookies und erhebt aggregierte Nutzungsdaten (Seitenaufrufe, Referrer, Browser/Endgerät in grober Form). IP-Adressen werden gekürzt/Hash-verarbeitet.</p>
+
+    <h2>4. Webanalyse (Vercel Analytics)</h2>
+    <p>Wir verwenden Vercel Analytics. Das Skript wird nur geladen, wenn du <em>Analytics</em> zulässt. Vercel arbeitet ohne Cookies und erhebt aggregierte Nutzungsdaten (Seitenaufrufe, Referrer, Browser/Endgerät in grober Form). IP-Adressen werden gekürzt/Hash-verarbeitet.</p>
     <ul>
-      <li><strong>Dienst:</strong> Plausible Insights OÜ, Västriku tn 2, 50403 Tartu, Estland</li>
+      <li><strong>Dienst:</strong> Vercel Inc., Avenue Huart Hamoir 71, 1030 Brussels, Belgium, privacy@vercel.com</li>
+      <li><strong>Rolle:</strong> Auftragsverarbeiter (in unserem Auftrag)</li>
       <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs.1 lit. a DSGVO (Einwilligung)</li>
-      <li><strong>Übermittlung:</strong> EU/EWR (nach Anbieterangaben). Es besteht ein AVV/DPA mit Plausible.</li>
+      <li><strong>Übermittlung:</strong> EU/EWR/USA (nach Anbieterangaben). Es besteht ein AVV/DPA mit Vercel.</li>
       <li><strong>Opt-out/Widerruf:</strong> jederzeit über <em>Datenschutzeinstellungen</em> bzw. /privacy</li>
     </ul>
 
     <h2>5. Werbung (Google AdSense)</h2>
-    <p>Werbeanzeigen werden nur geladen, wenn du <em>Ads</em> zulässt. Die Personalisierung erfolgt nur, wenn du zusätzlich <em>Personalized ads</em> zulässt. Ohne Personalisierung werden nicht-personalisierte Anzeigen (NPA) angefragt.</p>
+    <p>Werbeanzeigen werden nur geladen, wenn du <em>Ads</em> zulässt. Die Personalisierung erfolgt nur, wenn du zusätzlich <em>Personalized ads</em> zulässt. Dabei verarbeitet Google u. a. Nutzungsdaten, Standortdaten, Interessenprofile. Ohne Personalisierung werden nicht-personalisierte Anzeigen (NPA) angefragt.</p>
     <ul>
       <li><strong>Dienst:</strong> Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland</li>
-      <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs.1 lit. a DSGVO (Einwilligung); TTDSG § 25 Abs.1</li>
+      <li><strong>Rolle:</strong> eigener Verantwortlicher</li>
+      <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a DSGVO (Einwilligung); soweit Speicherungen/Zugriffe auf Endgeräte betroffen sind: § 25 Abs. 1 TTDSG</li>
       <li><strong>Technik:</strong> IAB TCF 2.2 + Google Consent Mode v2 (ad_storage, ad_user_data, ad_personalization)</li>
-      <li><strong>Drittlandtransfer:</strong> USA möglich. Rechtsgrundlage: EU-US Data Privacy Framework bzw. Standardvertragsklauseln (SCCs) von Google</li>
-      <li><strong>Widerruf:</strong> jederzeit über <em>Datenschutzeinstellungen</em> bzw. /privacy</li>
+      <li><strong>Verarbeitung:</strong> Nutzung von Nutzungsdaten, groben Geodaten und Interessenprofilen zu <em>Profiling</em>-Zwecken für personalisierte Werbung; keine ausschließlich automatisierten Entscheidungen durch uns mit Rechtswirkung.</li>
+      <li><strong>Drittlandtransfer:</strong> USA möglich; Garantien: EU-US Data Privacy Framework und/oder SCCs (laut Google).</li>
+      <li><strong>Steuerung:</strong> Widerruf jederzeit über <em>Datenschutzeinstellungen</em>; zusätzlich Google <a href="https://policies.google.com/technologies/ads">Werbung & Datenschutz</a> und <a href="https://adssettings.google.com/">Anzeigeneinstellungen</a>.</li>
     </ul>
+
 
     <h2>6. Externe Einbindungen</h2>
 
@@ -65,6 +70,8 @@ const canonical = new URL('/privacy/', Astro.site!);
     <p>Videos werden erst nach deiner Zustimmung zu <em>External embeds</em> geladen. Wir verwenden die Domain <code>youtube-nocookie.com</code>, die erst beim Abspielen Daten an YouTube übermittelt.</p>
     <ul>
       <li><strong>Dienst:</strong> Google Ireland Limited (YouTube)</li>
+      <li><strong>Rolle:</strong> eigener Verantwortlicher</li>
+      <li><strong>Datenschutzhinweise:</strong> YouTube/Google: <a href="https://policies.google.com/privacy">Datenschutz</a> </li> 
       <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs.1 lit. a DSGVO (Einwilligung)</li>
       <li><strong>Drittlandtransfer:</strong> USA möglich; siehe Abschnitt Google</li>
     </ul>
@@ -73,12 +80,14 @@ const canonical = new URL('/privacy/', Astro.site!);
     <p>Kommentare werden über Giscus eingebunden und erst nach deiner Zustimmung zu <em>External embeds</em> geladen. Bei Interaktion können Daten an GitHub übermittelt werden.</p>
     <ul>
       <li><strong>Dienst:</strong> GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA</li>
+      <li><strong>Rolle:</strong> eigener Verantwortlicher</li>
+      li><strong>Datenschutzhinweise:</strong> GitHub: <a href="https://docs.github.com/de/site-policy/privacy-policies/github-privacy-statement">Datenschutz</a></li>
       <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs.1 lit. a DSGVO (Einwilligung)</li>
       <li><strong>Drittlandtransfer:</strong> USA; geeignete Garantien (DPF/SCC) gem. Angaben des Anbieters</li>
     </ul>
 
     <h2>7. Cookies und ähnliche Technologien</h2>
-    <p>Essentielle Technologien (notwendig für den Betrieb) sind stets aktiv. Nicht-essentielle Technologien (Analytics, Werbung, externe Einbindungen) werden nur mit Einwilligung aktiviert. Du kannst deine Auswahl jederzeit ändern.</p>
+    <p>Essentielle Technologien (für den Betrieb erforderlich) sind stets aktiv (Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO; für Speicherungen/Zugriffe auf Endgeräte: § 25 Abs. 2 TTDSG). Nicht-essentielle Technologien (Analytics, Werbung, externe Einbindungen) werden nur mit Einwilligung aktiviert. Du kannst deine Auswahl jederzeit ändern.</p>
 
     <h2>8. Deine Rechte</h2>
     <ul>
@@ -91,6 +100,8 @@ const canonical = new URL('/privacy/', Astro.site!);
       <li>Widerruf erteilter Einwilligungen (Art. 7 Abs.3 DSGVO)</li>
       <li>Beschwerde bei einer Aufsichtsbehörde (Art. 77 DSGVO), z. B. bei der für dich zuständigen Landesdatenschutzbehörde.</li>
     </ul>
+
+    <p>Zur Ausübung deiner Rechte kontaktiere uns unter: <a href="mailto:business.tryonai@gmail.com">business.tryonai@gmail.com</a>. Zur Verifikation deiner Identität können wir zusätzliche Informationen anfordern.</p>
 
     <h2>9. Verwaltung deiner Einwilligungen</h2>
     <section class="card p-4 md:p-5 mb-6 not-prose">
