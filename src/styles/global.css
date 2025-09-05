@@ -95,7 +95,7 @@ code, pre { font-family: var(--font-mono); }
 .embed-box, .ad-box {
   position: relative;
   width: 100%;
-  aspect-ratio: var(--ar, 16/9);
+  aspect-ratio: var(--ar, 21/9);
   display: grid;
   place-items: center;
   overflow: hidden;
