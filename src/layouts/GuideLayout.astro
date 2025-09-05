@@ -11,7 +11,7 @@ import PrevNext from '../components/PrevNext.astro';
 const { frontmatter, headings, currentSlug } = Astro.props as {
   frontmatter: any;
   headings: { depth: number; slug: string; text: string }[];
-  currentSlug: string; // <= kommt jetzt von der Seite
+  currentSlug: string;
 };
 
 const canonical = new URL(Astro.url.pathname, Astro.site);
@@ -51,12 +51,14 @@ if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length)
 }
 ---
 
-
 <BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} ogImage={frontmatter.cover} category={frontmatter.category}>
   <Fragment slot="search"><SearchOverlay /></Fragment>
-  <div class="mx-auto max-w-7xl px-4 mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(720px,760px)_1fr]">
-    <div class="hidden lg:block"><TOC headings={headings} /></div>
-    <article class="prose prose-invert max-w-[760px]">
+
+  <!-- Mobile-first container with safe gutters; grid collapses on mobile -->
+  <div class="mx-auto max-w-7xl container-px mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(720px,760px)_1fr]">
+    <div class="hidden lg:block min-w-0"><TOC headings={headings} /></div>
+
+    <article class="prose prose-invert max-w-[760px] w-full">
       <Breadcrumbs items={[{name:'Guides', href:'/guides/'},{name:frontmatter.category, href:`/guides/${frontmatter.category}/`},{name:frontmatter.title}]} />
       <h1>{frontmatter.title}</h1>
       <p class="text-sm text-text2">
@@ -64,23 +66,29 @@ if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length)
         {frontmatter.updatedDate && <span> • Updated <time datetime={updISO}>{new Date(frontmatter.updatedDate).toLocaleDateString('en-US')}</time></span>}
         {frontmatter.readingTime && <span> • {frontmatter.readingTime} min read</span>}
       </p>
+
       {frontmatter.cover && (
         <img src={frontmatter.cover} alt={frontmatter.title} loading="lazy" decoding="async" class="w-full aspect-[16/9] object-cover rounded-card shadow-soft border border-border/60" />
       )}
-       <!-- Ad nach Hero -->
-      <AdsSlot name="article-top" provider="adsense" adsClient="ca-pub-6618488631609364" adSlot="1234567890" />
 
+      <!-- Ad nach Hero: stabil 16:9 auf Mobile -->
+      <div class="ad-box aspect-video mt-4">
+        <AdsSlot name="article-top" provider="adsense" adsClient="ca-pub-6618488631609364" adSlot="1234567890" />
+      </div>
 
       <slot />
 
       <!-- Ad am Artikelende -->
-      <AdsSlot name="SidebarTop" provider="adsense" adsClient="ca-pub-6618488631609364" adSlot="1234567890" />
+      <div class="ad-box aspect-video mt-8">
+        <AdsSlot name="SidebarTop" provider="adsense" adsClient="ca-pub-6618488631609364" adSlot="1234567890" />
+      </div>
 
       <PrevNext currentSlug={currentSlug} category={frontmatter.category} />
       <RelatedPosts currentSlug={currentSlug} category={frontmatter.category} tags={frontmatter.tags} />
-
     </article>
+
     <div class="hidden lg:block"></div>
+
     <div class="lg:col-start-2 lg:col-end-3">
       <CommentsGiscus
         repo="MarkusPolo/lnf-guides"
@@ -92,7 +100,6 @@ if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length)
         theme="preferred_color_scheme"
       />
     </div>
-
   </div>
 
   <script type="application/ld+json">{JSON.stringify(articleLD)}</script>

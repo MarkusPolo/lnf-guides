@@ -30,7 +30,7 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
 <html lang="en" class="dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <link rel="canonical" href={String(url)} />
     <meta name="google-adsense-account" content={ADSENSE_CLIENT} />
 
@@ -70,7 +70,6 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
       }
     })();
     </script>
-
 
     <!-- JSON-LD: WebSite -->
     <script type="application/ld+json">
@@ -167,7 +166,6 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
       })();
     </script>
 
-
     <!-- LNF Consent Bridge (für Analytics/Embeds) -->
     <script>
       (function(){
@@ -197,7 +195,7 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
           var d = getDecisions();
           listeners.forEach(function(fn){ try{ fn(d); }catch(e){} });
           try {
-            window.dispatchEvent(new CustomEvent('consent:changed', { detail: d }));
+            window.dispatchEvent(new CustomEvent('consent:changed', { detail: d })); 
             window.dispatchEvent(new Event('consent:updated'));
           } catch(e){}
         }
@@ -243,7 +241,7 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
     <script async src={"https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + ADSENSE_CLIENT} crossOrigin="anonymous"></script>
     <script>
       (function(){
-        var OPEN_TIMEOUT_MS = 8000; // etwas großzügiger
+        var OPEN_TIMEOUT_MS = 8000; 
         function openLocal(){ try{ window.consentUI?.open('settings'); }catch(e){} }
 
         function tryFC(cb){
@@ -265,14 +263,12 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
         function tryTCF(cb){
           try{
             if (typeof __tcfapi === 'function') {
-              // Wichtig: echte TC-String prüfen
               __tcfapi('getTCData', 2, function(data, success){
                 if (success && data && data.tcString && data.tcString.length > 10) {
-                  cb(true); // es existiert schon ein Consent-Record → nicht öffnen
+                  cb(true);
                 } else {
-                  // UI anzeigen
                   try { __tcfapi('displayConsentUi', 2, function(){}); } catch(e){}
-                  cb(true); // wir haben versucht, die UI zu öffnen
+                  cb(true);
                 }
               });
               return;
@@ -286,19 +282,15 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
           var t=setTimeout(function(){ if(!done){ done=true; openLocal(); }}, OPEN_TIMEOUT_MS);
           function finish(ok){ if(!done){ done=true; clearTimeout(t); if(!ok) openLocal(); } }
 
-          // 1) Versuche FC
           tryFC(function(fcOk){
             if (fcOk) return finish(true);
-            // 2) Versuche TCF
             tryTCF(function(tcfOk){
               if (tcfOk) return finish(true);
-              // 3) Fallback lokal
               finish(false);
             });
           });
         }
 
-        // Klick-Handler
         document.addEventListener('click', function(ev){
           var t = ev.target && ev.target.closest && ev.target.closest('[data-privacy-open]');
           if (!t) return;
@@ -306,7 +298,6 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
           openPrivacy();
         });
 
-        // Auto-open bei Erstbesuch, wenn es KEINE TC-String gibt
         window.addEventListener('load', function(){
           var tried=false;
           function attempt(){
@@ -321,23 +312,20 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
               openPrivacy();
             }
           }
-          setTimeout(attempt, 400); // kurz nach onload
+          setTimeout(attempt, 400);
         }, { once:true });
 
-        // Für globale Nutzung
         window.managePrivacy = openPrivacy;
       })();
       </script>
       <script>
         (function(){
-          // Logge, ob FC initialisiert
           window.googlefc = window.googlefc || {};
           window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
           window.googlefc.callbackQueue.push(function(){
             console.log('[FC] initialized:', typeof googlefc.showRevocationMessage === 'function');
           });
 
-          // Logge TCF
           var tm = setInterval(function(){
             if (typeof __tcfapi === 'function') {
               console.log('[TCF] __tcfapi available');
@@ -349,30 +337,28 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
           }, 500);
         })();
       </script>
-
-
   </head>
 
-  <body class="font-sans bg-bg text-text">
-    <a href="#content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:bg-surface focus:px-3 focus:py-2 focus:rounded">Skip to content</a>
+  <body class="font-sans bg-bg text-text overflow-x-hidden">
+    <a href="#content" class="sr-only focus:not-sr-only focus:fixed focus:left-[max(1rem,env(safe-area-inset-left))] focus:top-4 focus:bg-surface focus:px-3 focus:py-2 focus:rounded">Skip to content</a>
 
-    <header class="sticky top-0 z-[1000] isolate border-b border-border/60 bg-bg backdrop-blur">
-      <div class="mx-auto max-w-7xl px-4 py-3 flex items-center gap-4">
-        <a href="/" class="flex items-center gap-2">
+    <header class="sticky top-0 z-[1000] isolate border-b border-border/60 bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
+      <div class="mx-auto max-w-7xl px-4 sm:px-5 py-3 flex items-center gap-4 min-w-0">
+        <a href="/" class="flex items-center gap-2 shrink-0">
           <img src="/images/logo.svg" alt="LNF Guides" class="h-7 w-7" />
           <span class="text-lg font-extrabold tracking-tight">LNF Guides</span>
         </a>
 
-        <div class="flex-1 max-w-xl mx-auto hidden md:block">
+        <div class="flex-1 max-w-xl mx-auto hidden md:block min-w-0">
           <button
             id="open-search"
-            class="w-full text-left border border-border/60 rounded-full px-4 py-2 text-text2 hover:bg-surface"
+            class="w-full truncate text-left border border-border/60 rounded-full px-4 py-2 text-text2 hover:bg-surface"
             aria-label="Open search (Cmd/Ctrl+K)"
             type="button"
           >Press ⌘/Ctrl K to search…</button>
         </div>
 
-        <nav class="flex items-center gap-4 text-sm">
+        <nav class="flex items-center gap-3 flex-wrap text-sm">
           <a href="/guides/" class="hover:underline">Guides</a>
           <a href="/news/" class="hover:underline">News</a>
           <a href="/updates/" class="hover:underline">Updates</a>
@@ -384,10 +370,12 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
     </header>
 
     <slot name="search" />
-    <main id="content"><slot /></main>
+    <main id="content" class="w-full overflow-x-hidden">
+      <slot />
+    </main>
 
     <footer class="mt-16 border-t border-border/60">
-      <div class="mx-auto max-w-7xl px-4 py-12 grid gap-8 md:grid-cols-4 text-sm">
+      <div class="mx-auto max-w-7xl px-4 sm:px-5 py-12 grid gap-8 md:grid-cols-4 text-sm">
         <section>
           <h3 class="font-semibold mb-3">Site</h3>
           <ul class="space-y-2">
@@ -411,7 +399,7 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
           <button class="underline" data-privacy-open type="button">Privacy settings</button>
         </section>
       </div>
-      <div class="mx-auto max-w-7xl px-4 pb-10 text-xs text-text2">
+      <div class="mx-auto max-w-7xl px-4 sm:px-5 pb-10 text-xs text-text2">
         Unofficial fan site. Not affiliated with Hello Games.
       </div>
     </footer>
@@ -447,7 +435,6 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
               } catch(e){}
               cb(false);
             });
-            // Falls FC noch nicht initialisiert ist, verarbeitet es die queue später
           } catch(e){ cb(false); }
         }
 
@@ -462,7 +449,6 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
         }
 
         function openPrivacy(){
-          // 1) FC, wenn nicht sichtbar → 2) TCF, wenn nicht → 3) lokales UI
           tryOpenFundingChoices(callWhenReady(function(fcOk){
             if (fcOk) return;
             tryOpenTCF(callWhenReady(function(tcfOk){
@@ -483,7 +469,6 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
 
         window.managePrivacy = openPrivacy;
 
-        // Erstbesuch/Inkognito: FC → TCF → lokal automatisch anstoßen, wenn kein TCF-String
         window.addEventListener('load', function(){
           try {
             if (typeof __tcfapi === 'function') {
@@ -491,7 +476,6 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
                 if (!success || !tcData || !tcData.tcString) openPrivacy();
               });
             } else {
-              // Falls __tcfapi noch nicht verfügbar: kurz warten, dann erneut versuchen
               setTimeout(openPrivacy, 600);
             }
           } catch(e){}

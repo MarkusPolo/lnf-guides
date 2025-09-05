@@ -41,10 +41,10 @@ const articleLD = {
 >
   <Fragment slot="search"><SearchOverlay /></Fragment>
 
-  <section class="mx-auto max-w-7xl px-4 mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(720px,760px)_1fr]">
+  <section class="mx-auto max-w-7xl container-px mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(720px,760px)_1fr]">
     <div class="hidden lg:block"></div>
 
-    <article class="prose prose-invert max-w-[760px]">
+    <article class="prose prose-invert max-w-[760px] w-full">
       <Breadcrumbs items={[
         { name: 'News', href: '/news/' },
         { name: frontmatter.title }
@@ -70,12 +70,16 @@ const articleLD = {
       )}
 
       <!-- Ad nach Hero -->
-      <AdsSlot name="news-top" height={160} class="mt-6" />
+      <div class="ad-box aspect-video mt-6">
+        <AdsSlot name="news-top" height={160} class="mt-0" />
+      </div>
 
       <slot />
 
       <!-- Ad am Artikelende -->
-      <AdsSlot name="news-bottom" height={240} class="mt-8" />
+      <div class="ad-box aspect-video mt-8">
+        <AdsSlot name="news-bottom" height={240} class="mt-0" />
+      </div>
     </article>
 
     <div class="hidden lg:block"></div>
