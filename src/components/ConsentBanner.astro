@@ -320,6 +320,26 @@ const POLICY_VERSION = 2; // rechtstextliche Version deiner Policy
       });
     } catch {}
     fillSettingsFromState();
+    // FC/TCF-Healthcheck: wenn keine Entscheidung + keine TC-String → lokales Banner
+    (function ensureAnyUI(){
+      if (decided()) return;
+      // Versuche __tcfapi → wenn nicht da oder keine tcString: lokales Banner
+      var done=false; var timer=setTimeout(function(){ if(!done) showBanner(); }, 1200);
+      try {
+        if (typeof __tcfapi === 'function') {
+          __tcfapi('getTCData', 2, function(tc, ok){
+            if (done) return;
+            done=true; clearTimeout(timer);
+            if (!ok || !tc || !tc.tcString) showBanner();
+            // Wenn es eine tcString gibt, FC/TCF zeigt wahrscheinlich gleich die UI oder alles ist bereits entschieden
+          });
+        } else {
+          // Kein __tcfapi → lokales Banner
+          // (hier nicht zwingend showBanner(), weil openPrivacy() in BaseLayout bereits triggert)
+        }
+      } catch(e){ /* im Zweifel greift timer → showBanner() */ }
+    })();
+
     if (!decided()) showBanner();
   })();
 
