@@ -1,4 +1,5 @@
 export type BreadcrumbEntry = { name: string; url: string };
+
 export type BuildArticleInput = {
   type?: string;
   headline: string;
@@ -11,6 +12,8 @@ export type BuildArticleInput = {
 
 export type FAQItem = { q: string; a: string };
 export type FAQSection = { id?: string; headline?: string; items: FAQItem[] };
+
+// ---------- Core builders ----------
 
 export function buildBreadcrumbLD(entries: BreadcrumbEntry[]) {
   return {
@@ -50,29 +53,73 @@ export function buildArticleLD(input: BuildArticleInput) {
   return obj;
 }
 
+// ---------- FAQ helpers ----------
+
+function normalizeFAQSections(anySections: any): FAQSection[] {
+  // Erwartet bevorzugt: [{ id, headline, items:[{q,a}...] }, ...]
+  if (Array.isArray(anySections)) {
+    return anySections
+      .map((s) => {
+        const items: FAQItem[] = Array.isArray(s?.items)
+          ? s.items
+          : Array.isArray(s) // falls versehentlich direkt [{q,a},…] übergeben wurde
+          ? (s as any)
+          : [];
+        return { id: s?.id, headline: s?.headline, items };
+      })
+      .filter((s) => Array.isArray(s.items) && s.items.length > 0);
+  }
+  return [];
+}
+
+function normalizeFAQItems(anyItems: any): FAQItem[] {
+  // Fallback: frontmatter.schema.faq: [{q,a}, …]
+  if (Array.isArray(anyItems)) {
+    return anyItems.filter(
+      (it) =>
+        it &&
+        typeof it.q === "string" &&
+        it.q.trim() &&
+        typeof it.a === "string" &&
+        it.a.trim()
+    );
+  }
+  return [];
+}
+
 /**
- * Baut EINE FAQPage mit allen Q/A aus allen Sektionen.
- * Leer- oder kaputte Einträge werden gefiltert.
+ * Akzeptiert:
+ * - sections (bevorzugt): [{ id?, headline?, items:[{q,a}] }]
+ * - fallbackItems: [{q,a}] (z.B. frontmatter.schema.faq)
  */
-export function buildFAQPageFromSections(
-  sections: FAQSection[],
+export function buildFAQPage(
+  sections: FAQSection[] | any,
+  fallbackItems?: FAQItem[] | any,
   opts?: { name?: string }
 ) {
-  const allQA = (sections || [])
-    .flatMap((s) => Array.isArray(s?.items) ? s.items : [])
-    .filter((it) => it && typeof it.q === "string" && it.q.trim() && typeof it.a === "string" && it.a.trim())
-    .map((it) => ({
-      "@type": "Question",
-      name: it.q,
-      acceptedAnswer: { "@type": "Answer", text: it.a },
-    }));
+  const normSections = normalizeFAQSections(sections);
+  const fromSections: FAQItem[] = normSections.flatMap((s) => s.items || []);
+  const fromFallback = normalizeFAQItems(fallbackItems);
 
-  if (!allQA.length) return null;
+  const all = [...fromSections, ...fromFallback].filter(
+    (it) =>
+      it &&
+      typeof it.q === "string" &&
+      it.q.trim() &&
+      typeof it.a === "string" &&
+      it.a.trim()
+  );
+
+  if (!all.length) return null;
 
   const faq: any = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: allQA,
+    mainEntity: all.map((it) => ({
+      "@type": "Question",
+      name: it.q,
+      acceptedAnswer: { "@type": "Answer", text: it.a },
+    })),
   };
 
   if (opts?.name) faq.name = opts.name;
