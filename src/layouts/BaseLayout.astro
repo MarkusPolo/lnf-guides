@@ -20,17 +20,21 @@ const ogFallbackByCategory: Record<string, string> = {
   dragons: "/images/og/dragons.png",
   beginners: "/images/og/beginners.png",
 };
-const finalOg = ogImage || ogFallbackByCategory[category] || "/images/og/default.png";
+const finalOg =
+  ogImage || ogFallbackByCategory[category] || "/images/og/default.png";
 
 // IDs – prüfe beide
 const FC_PUBLISHER_ID = "pub-6618488631609364";
-const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
+const ADSENSE_CLIENT = "ca-pub-6618488631609364";
 ---
 
 <html lang="en" class="dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
     <link rel="canonical" href={String(url)} />
     <meta name="google-adsense-account" content={ADSENSE_CLIENT} />
 
@@ -50,30 +54,32 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
 
     <!-- FC present iframe: muss vor FC-Skript garantiert existieren -->
     <script>
-    (function ensureGooglefcPresent(){
-      function inject(){
-        try{
-          if (!window.frames || window.frames['googlefcPresent']) return;
-          var f=document.createElement('iframe');
-          f.name='googlefcPresent';
-          f.style='width:0;height:0;border:0;display:none';
-          document.body ? document.body.appendChild(f)
-                        : document.addEventListener('DOMContentLoaded', function(){ 
-                            try{ document.body.appendChild(f); }catch(e){}
-                          }, {once:true});
-        }catch(e){}
-      }
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', inject, {once:true});
-      } else {
-        inject();
-      }
-    })();
+      (function ensureGooglefcPresent(){
+        function inject(){
+          try{
+            if (!window.frames || window.frames['googlefcPresent']) return;
+            var f=document.createElement('iframe');
+            f.name='googlefcPresent';
+            f.style='width:0;height:0;border:0;display:none';
+            document.body ? document.body.appendChild(f)
+                          : document.addEventListener('DOMContentLoaded', function(){ 
+                              try{ document.body.appendChild(f); }catch(e){}
+                            }, {once:true});
+          }catch(e){}
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', inject, {once:true});
+        } else {
+          inject();
+        }
+      })();
     </script>
 
     <!-- JSON-LD: WebSite -->
-    <script type="application/ld+json">
-      {JSON.stringify({
+    <script
+      type="application/ld+json"
+      is:inline
+      set:html={JSON.stringify({
         "@context": "https://schema.org",
         "@type": "WebSite",
         url: siteUrl,
@@ -81,22 +87,24 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
         potentialAction: {
           "@type": "SearchAction",
           target: `${siteUrl}/search?q={query}`,
-          "query-input": "required name=query",
-        },
+          "query-input": "required name=query"
+        }
       })}
-    </script>
+    />
 
     <!-- JSON-LD: Organization -->
-    <script type="application/ld+json">
-      {JSON.stringify({
+    <script
+      type="application/ld+json"
+      is:inline
+      set:html={JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Organization",
         name: "LNF Guides",
         url: siteUrl,
         logo: `${siteUrl}/images/logo.svg`,
-        sameAs: ["https://github.com/lnf-guides"],
+        sameAs: ["https://github.com/lnf-guides"]
       })}
-    </script>
+    />
 
     <!-- Consent Mode v2 (Default = denied) -->
     <script>
@@ -238,7 +246,11 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
     </script>
 
     <!-- AdSense: IMMER laden (PA/NPA/LTD via Consent Mode + TCF-String) -->
-    <script async src={"https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + ADSENSE_CLIENT} crossOrigin="anonymous"></script>
+    <script
+      async
+      src={"https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + ADSENSE_CLIENT}
+      crossOrigin="anonymous"
+    ></script>
     <script>
       (function(){
         var OPEN_TIMEOUT_MS = 8000; 
@@ -317,33 +329,41 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
 
         window.managePrivacy = openPrivacy;
       })();
-      </script>
-      <script>
-        (function(){
-          window.googlefc = window.googlefc || {};
-          window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
-          window.googlefc.callbackQueue.push(function(){
-            console.log('[FC] initialized:', typeof googlefc.showRevocationMessage === 'function');
-          });
+    </script>
+    <script>
+      (function(){
+        window.googlefc = window.googlefc || {};
+        window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
+        window.googlefc.callbackQueue.push(function(){
+          console.log('[FC] initialized:', typeof googlefc.showRevocationMessage === 'function');
+        });
 
-          var tm = setInterval(function(){
-            if (typeof __tcfapi === 'function') {
-              console.log('[TCF] __tcfapi available');
-              __tcfapi('getTCData', 2, function(tc, ok){
-                console.log('[TCF] getTCData ok=%o tcString=%o', ok, tc && tc.tcString);
-              });
-              clearInterval(tm);
-            }
-          }, 500);
-        })();
-      </script>
+        var tm = setInterval(function(){
+          if (typeof __tcfapi === 'function') {
+            console.log('[TCF] __tcfapi available');
+            __tcfapi('getTCData', 2, function(tc, ok){
+              console.log('[TCF] getTCData ok=%o tcString=%o', ok, tc && tc.tcString);
+            });
+            clearInterval(tm);
+          }
+        }, 500);
+      })();
+    </script>
   </head>
 
   <body class="font-sans bg-bg text-text overflow-x-hidden">
-    <a href="#content" class="sr-only focus:not-sr-only focus:fixed focus:left-[max(1rem,env(safe-area-inset-left))] focus:top-4 focus:bg-surface focus:px-3 focus:py-2 focus:rounded">Skip to content</a>
+    <a
+      href="#content"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-[max(1rem,env(safe-area-inset-left))] focus:top-4 focus:bg-surface focus:px-3 focus:py-2 focus:rounded"
+      >Skip to content</a
+    >
 
-    <header class="sticky top-0 z-[1000] isolate border-b border-border/60 bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
-      <div class="mx-auto max-w-7xl px-4 sm:px-5 py-3 flex items-center gap-4 min-w-0">
+    <header
+      class="sticky top-0 z-[1000] isolate border-b border-border/60 bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/70"
+    >
+      <div
+        class="mx-auto max-w-7xl px-4 sm:px-5 py-3 flex items-center gap-4 min-w-0"
+      >
         <a href="/" class="flex items-center gap-2 shrink-0">
           <img src="/images/logo.svg" alt="LNF Guides" class="h-7 w-7" />
           <span class="text-lg font-extrabold tracking-tight">LNF Guides</span>
@@ -355,7 +375,8 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
             class="w-full truncate text-left border border-border/60 rounded-full px-4 py-2 text-text2 hover:bg-surface"
             aria-label="Open search (Cmd/Ctrl+K)"
             type="button"
-          >Press ⌘/Ctrl K to search…</button>
+            >Press ⌘/Ctrl K to search…</button
+          >
         </div>
 
         <nav class="flex items-center gap-3 flex-wrap text-sm">
@@ -364,7 +385,14 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
           <a href="/updates/" class="hover:underline">Updates</a>
           <a href="/about/" class="hover:underline">About</a>
           <a href="/contact/" class="btn btn-primary">Subscribe</a>
-          <button class="underline hover:text-text" data-privacy-open type="button" role="button" aria-label="Privacy settings">Privacy settings</button>
+          <button
+            class="underline hover:text-text"
+            data-privacy-open
+            type="button"
+            role="button"
+            aria-label="Privacy settings"
+            >Privacy settings</button
+          >
         </nav>
       </div>
     </header>
@@ -375,7 +403,9 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
     </main>
 
     <footer class="mt-16 border-t border-border/60">
-      <div class="mx-auto max-w-7xl px-4 sm:px-5 py-12 grid gap-8 md:grid-cols-4 text-sm">
+      <div
+        class="mx-auto max-w-7xl px-4 sm:px-5 py-12 grid gap-8 md:grid-cols-4 text-sm"
+      >
         <section>
           <h3 class="font-semibold mb-3">Site</h3>
           <ul class="space-y-2">
@@ -395,8 +425,10 @@ const ADSENSE_CLIENT   = "ca-pub-6618488631609364";
           </ul>
         </section>
         <section class="md:col-span-2">
-          <h3 class="font-semibold mb-3">Controls</h3>
-          <button class="underline" data-privacy-open type="button">Privacy settings</button>
+          <h3 class="text-sm font-semibold mb-3">Controls</h3>
+          <button class="underline" data-privacy-open type="button">
+            Privacy settings
+          </button>
         </section>
       </div>
       <div class="mx-auto max-w-7xl px-4 sm:px-5 pb-10 text-xs text-text2">

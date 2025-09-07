@@ -44,6 +44,7 @@ const { article: articleLD, faqPages } = attachFAQPartsToArticle(baseArticleLD, 
 // Falls du künftig weitere Schemas sammeln willst (HowTo, VideoObject, Product ...)
 const extraSchemas = frontmatter?.schema?.extra || []; // Array beliebiger JSON-LD Objekte
 ---
+
 <BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} ogImage={frontmatter.cover} category={frontmatter.category}>
   <Fragment slot="search"><SearchOverlay /></Fragment>
 
@@ -97,10 +98,28 @@ const extraSchemas = frontmatter?.schema?.extra || []; // Array beliebiger JSON-
   </div>
 
   <!-- JSON-LD: ein Script pro Objekt -->
-  <script type="application/ld+json">{JSON.stringify(articleLD)}</script>
-  <script type="application/ld+json">{JSON.stringify(breadcrumbLD)}</script>
-  {faqPages.map((f) => <script type="application/ld+json">{JSON.stringify(f)}</script>)}
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify(articleLD)}
+  />
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify(breadcrumbLD)}
+  />
+  {faqPages.map((f) => (
+    <script
+      type="application/ld+json"
+      is:inline
+      set:html={JSON.stringify(f)}
+    />
+  ))}
   {Array.isArray(extraSchemas) && extraSchemas.map((obj: any) => (
-    <script type="application/ld+json">{JSON.stringify(obj)}</script>
+    <script
+      type="application/ld+json"
+      is:inline
+      set:html={JSON.stringify(obj)}
+    />
   ))}
 </BaseLayout>
