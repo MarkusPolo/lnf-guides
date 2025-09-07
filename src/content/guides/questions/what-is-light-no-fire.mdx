@@ -1,6 +1,6 @@
 ---
 title: "What is Light No Fire?"
-description: "An expert, source-backed explainer of Hello Games’ next project, what the trailer and press kit really say, and which signals to watch."
+description: "This"
 pubDate: 2025-09-07
 updatedDate: 2025-09-07
 category: "questions"
@@ -9,6 +9,18 @@ tags:
   - light no fire
   - hello games
   - game showcase
+
+# NEU: strukturierte FAQ-Quellen (beliebig viele Sektionen)
+faqSections:
+  - id: "general"
+    headline: "FAQ"
+    items:
+      - q: "Is this just No Man’s Sky in fantasy clothes"
+        a: "The intent is different, Not many planets but one cohesive world, not starships but boats, mounts, and on foot traversal, less galaxy hopping, more expedition planning."
+      - q: "Will there be quests and combat or only vibes"
+        a: "The reveal and press copy reference role playing depth, NPCs, and hostile fauna, the trailer shows blades and bows in motion, expect a mix of authored goals and emergent systems."
+      - q: "Can I play solo?"
+        a: "The language emphasizes together, but nothing prevents solitary play, the challenge will be logistics, scale rewards cooperation, so be prepared to slow down and stage your trips."
 ---
 
 ## TL;DR
@@ -35,13 +47,6 @@ For context on the ocean claim see the coverage at [PC Gamer](https://www.pcgame
 
 Although there is no long feature list yet, the materials already outline a loop that blends exploration, crafting, and shared traversal. Mounts, including dragons, imply vertical mobility that links ground scouting to aerial survey, camps and cooking hint at light logistics and forward operating bases rather than castle building, and the editing shows characters moving and acting in formation, which suggests role based cooperation, a pathfinder calling routes, a quartermaster handling supplies, a protector watching threat angles. From a production perspective this reads like an incremental, tool driven project where Hello Games keeps public promises small until the tech is stable enough to withstand months of real players. If you are tracking milestones, rely on signals that have to be true for any launch, a ratings listing, a platform badge on a fresh trailer, and a storefront flip from TBA to an actual window, once those appear the cadence usually accelerates rather than stalls.
 
-## FAQ
+import FAQ from '../../../components/FAQ.astro';
 
-**Is this just No Man’s Sky in fantasy clothes**  
-The intent is different, Not many planets but one cohesive world, not starships but boats, mounts, and on foot traversal, less galaxy hopping, more expedition planning.  
-
-**Will there be quests and combat or only vibes**  
-The reveal and press copy reference role playing depth, NPCs, and hostile fauna, the trailer shows blades and bows in motion, expect a mix of authored goals and emergent systems.  
-
-**Can I play solo**  
-The language emphasizes together, but nothing prevents solitary play, the challenge will be logistics, scale rewards cooperation, so be prepared to slow down and stage your trips.
+<FAQ sections={frontmatter.faqSections} />
