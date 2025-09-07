@@ -8,7 +8,12 @@ import CommentsGiscus from '../components/CommentsGiscus.astro';
 import RelatedPosts from '../components/RelatedPosts.astro';
 import PrevNext from '../components/PrevNext.astro';
 
-import { buildBreadcrumbLD, buildArticleLD, attachFAQPartsToArticle, type FAQSection } from '../lib/schema';
+import {
+  buildBreadcrumbLD,
+  buildArticleLD,
+  buildFAQPageFromSections,
+  type FAQSection
+} from '../lib/schema';
 
 const { frontmatter, headings, currentSlug } = Astro.props as {
   frontmatter: any;
@@ -26,7 +31,6 @@ const breadcrumbLD = buildBreadcrumbLD([
   { name: frontmatter.title, url: canonical },
 ]);
 
-// Article/BlogPosting/NewsArticle o.ä.
 const baseArticleLD = buildArticleLD({
   type: frontmatter?.schema?.type || 'Article',
   headline: frontmatter.title,
@@ -37,15 +41,21 @@ const baseArticleLD = buildArticleLD({
   canonical,
 });
 
-// FAQ-Sektionen aus Frontmatter (oder leere Liste)
+// FAQ aus Frontmatter zu EINER FAQPage zusammenziehen
 const faqSections = (frontmatter.faqSections || []) as FAQSection[];
-const { article: articleLD, faqPages } = attachFAQPartsToArticle(baseArticleLD, faqSections, canonical);
+const faqPage = buildFAQPageFromSections(faqSections, { name: 'FAQ' });
 
-// Falls du künftig weitere Schemas sammeln willst (HowTo, VideoObject, Product ...)
-const extraSchemas = frontmatter?.schema?.extra || []; // Array beliebiger JSON-LD Objekte
+// optionale zusätzliche Schemas (Array von Objekten)
+const extraSchemas = frontmatter?.schema?.extra || [];
 ---
 
-<BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} ogImage={frontmatter.cover} category={frontmatter.category}>
+<BaseLayout
+  title={frontmatter.title}
+  description={frontmatter.description}
+  canonical={canonical}
+  ogImage={frontmatter.cover}
+  category={frontmatter.category}
+>
   <Fragment slot="search"><SearchOverlay /></Fragment>
 
   <div class="mx-auto max-w-7xl container-px mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(720px,760px)_1fr]">
@@ -57,6 +67,7 @@ const extraSchemas = frontmatter?.schema?.extra || []; // Array beliebiger JSON-
         {name:frontmatter.category, href:`/guides/${frontmatter.category}/`},
         {name:frontmatter.title}
       ]} />
+
       <h1>{frontmatter.title}</h1>
       <p class="text-sm text-text2">
         <time datetime={pubISO}>{new Date(frontmatter.pubDate).toLocaleDateString('en-US')}</time>
@@ -65,7 +76,13 @@ const extraSchemas = frontmatter?.schema?.extra || []; // Array beliebiger JSON-
       </p>
 
       {frontmatter.cover && (
-        <img src={frontmatter.cover} alt={frontmatter.title} loading="lazy" decoding="async" class="w-full aspect-[16/9] object-cover rounded-card shadow-soft border border-border/60" />
+        <img
+          src={frontmatter.cover}
+          alt={frontmatter.title}
+          loading="lazy"
+          decoding="async"
+          class="w-full aspect-[16/9] object-cover rounded-card shadow-soft border border-border/60"
+        />
       )}
 
       <div class="ad-box aspect-video mt-4">
@@ -97,29 +114,11 @@ const extraSchemas = frontmatter?.schema?.extra || []; // Array beliebiger JSON-
     </div>
   </div>
 
-  <!-- JSON-LD: ein Script pro Objekt -->
-  <script
-    type="application/ld+json"
-    is:inline
-    set:html={JSON.stringify(articleLD)}
-  />
-  <script
-    type="application/ld+json"
-    is:inline
-    set:html={JSON.stringify(breadcrumbLD)}
-  />
-  {faqPages.map((f) => (
-    <script
-      type="application/ld+json"
-      is:inline
-      set:html={JSON.stringify(f)}
-    />
-  ))}
+  <!-- JSON-LD-Ausgabe: jeweils als valides, inline gesetztes Script -->
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(baseArticleLD)} />
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(breadcrumbLD)} />
+  {faqPage && <script type="application/ld+json" is:inline set:html={JSON.stringify(faqPage)} />}
   {Array.isArray(extraSchemas) && extraSchemas.map((obj: any) => (
-    <script
-      type="application/ld+json"
-      is:inline
-      set:html={JSON.stringify(obj)}
-    />
+    <script type="application/ld+json" is:inline set:html={JSON.stringify(obj)} />
   ))}
 </BaseLayout>
