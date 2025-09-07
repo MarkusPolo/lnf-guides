@@ -25,34 +25,50 @@ const canonical = new URL(Astro.url.pathname, Astro.site).toString();
 const pubISO = new Date(frontmatter.pubDate).toISOString();
 const updISO = frontmatter.updatedDate ? new Date(frontmatter.updatedDate).toISOString() : undefined;
 
+// Cover absolut machen (für OG+LD)
+function toAbs(u: string | undefined) {
+  try {
+    if (!u) return undefined;
+    if (/^https?:\/\//i.test(u)) return u;
+    return new URL(u, Astro.site).toString();
+  } catch { return u; }
+}
+const absCover = toAbs(frontmatter.cover);
+
 const breadcrumbLD = buildBreadcrumbLD([
   { name: 'Guides', url: new URL('/guides/', Astro.site).toString() },
   { name: frontmatter.category, url: new URL(`/guides/${frontmatter.category}/`, Astro.site).toString() },
   { name: frontmatter.title, url: canonical },
 ]);
 
+// erweitertes Article-LD: publisher/author/keywords/inLanguage
 const baseArticleLD = buildArticleLD({
   type: frontmatter?.schema?.type || 'Article',
   headline: frontmatter.title,
   description: frontmatter.description,
   datePublished: pubISO,
   dateModified: updISO,
-  image: frontmatter.cover ? [frontmatter.cover] : undefined,
+  image: absCover ? [absCover] : undefined,
   canonical,
+  author: { "@type": "Organization", name: "LNF Guides", url: new URL('/', Astro.site).toString() },
+  publisher: {
+    "@type": "Organization",
+    name: "LNF Guides",
+    logo: { "@type": "ImageObject", url: new URL('/images/logo.svg', Astro.site).toString() }
+  },
+  inLanguage: "en",
+  keywords: Array.isArray(frontmatter.tags) ? frontmatter.tags.join(', ') : undefined
 });
 
 // ---- FAQ: robust gegen verschiedene Quellen ----
-// bevorzugt: top-level frontmatter.faqSections
 const faqSections = (frontmatter?.faqSections || []) as FAQSection[];
-// fallback: frontmatter.schema.faq (flache Liste [{q,a}])
 const fallbackFAQ = frontmatter?.schema?.faq || [];
-
 const faqPage = buildFAQPage(faqSections, fallbackFAQ, { name: 'FAQ' });
 
 // optionale zusätzliche Schemas (Array von Objekten)
 const extraSchemas = frontmatter?.schema?.extra || [];
 
-// ------ DEV-Check: Zahlen inlined in die Seite (kann nach Debug entfernt werden) ------
+// DEV-Check: Zahlen inlined in die Seite (kann nach Debug entfernt werden)
 const _FAQ_DEBUG = {
   hasFaqSections: Array.isArray(faqSections),
   faqSectionsCount: Array.isArray(faqSections) ? faqSections.length : 0,
@@ -65,8 +81,18 @@ const _FAQ_DEBUG = {
   title={frontmatter.title}
   description={frontmatter.description}
   canonical={canonical}
-  ogImage={frontmatter.cover}
+  ogImage={absCover}
   category={frontmatter.category}
+  type="article"
+  locale="en_US"
+  imageAlt={frontmatter.title}
+  article={{
+    published: pubISO,
+    modified: updISO,
+    author: "LNF Guides",
+    section: frontmatter.category,
+    tags: frontmatter.tags
+  }}
 >
   <Fragment slot="search"><SearchOverlay /></Fragment>
 

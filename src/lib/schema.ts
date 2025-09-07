@@ -8,6 +8,12 @@ export type BuildArticleInput = {
   dateModified?: string;
   image?: string[] | undefined;
   canonical: string;
+
+  // NEU: erweiterte Felder
+  author?: any;      // z.B. { "@type":"Organization", name:"LNF Guides", url:"..." }
+  publisher?: any;   // { "@type":"Organization", name:"...", logo:{ "@type":"ImageObject", url:"..." } }
+  inLanguage?: string;
+  keywords?: string; // kommasepariert
 };
 
 export type FAQItem = { q: string; a: string };
@@ -37,6 +43,10 @@ export function buildArticleLD(input: BuildArticleInput) {
     dateModified,
     image,
     canonical,
+    author,
+    publisher,
+    inLanguage,
+    keywords
   } = input;
 
   const obj: any = {
@@ -47,7 +57,14 @@ export function buildArticleLD(input: BuildArticleInput) {
     datePublished,
     ...(dateModified ? { dateModified } : {}),
     ...(image && image.length ? { image } : {}),
-    mainEntityOfPage: canonical,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": canonical
+    },
+    ...(author ? { author } : {}),
+    ...(publisher ? { publisher } : {}),
+    ...(inLanguage ? { inLanguage } : {}),
+    ...(keywords ? { keywords } : {}),
   };
 
   return obj;
@@ -55,14 +72,15 @@ export function buildArticleLD(input: BuildArticleInput) {
 
 // ---------- FAQ helpers ----------
 
+export type NormalizedFAQSection = FAQSection;
+
 function normalizeFAQSections(anySections: any): FAQSection[] {
-  // Erwartet bevorzugt: [{ id, headline, items:[{q,a}...] }, ...]
   if (Array.isArray(anySections)) {
     return anySections
       .map((s) => {
         const items: FAQItem[] = Array.isArray(s?.items)
           ? s.items
-          : Array.isArray(s) // falls versehentlich direkt [{q,a},…] übergeben wurde
+          : Array.isArray(s)
           ? (s as any)
           : [];
         return { id: s?.id, headline: s?.headline, items };
@@ -73,7 +91,6 @@ function normalizeFAQSections(anySections: any): FAQSection[] {
 }
 
 function normalizeFAQItems(anyItems: any): FAQItem[] {
-  // Fallback: frontmatter.schema.faq: [{q,a}, …]
   if (Array.isArray(anyItems)) {
     return anyItems.filter(
       (it) =>
