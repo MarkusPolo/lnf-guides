@@ -1,20 +1,79 @@
 ---
-interface FAQItem { q: string; a: string }
-interface FAQSection { id?: string; headline?: string; items: FAQItem[] }
+// src/components/FAQ.astro
+// Props: sections: Array<{ id?: string; headline?: string; items: { q: string; a: string }[] }>
 
-const { sections } = Astro.props as { sections: FAQSection[] };
+type FAQItem = { q: string; a: string };
+type FAQSection = { id?: string; headline?: string; items?: FAQItem[] };
+
+const { sections = [] } = Astro.props as { sections: FAQSection[] };
+
+// helpers
+const ensureQ = (q: string) => {
+  if (!q) return "";
+  const t = q.trim();
+  return /[?？！]$/.test(t) ? t : t + "?";
+};
+const clean = (s: string) => (typeof s === "string" ? s.trim() : "");
+
+// flache Item-Liste fürs Schema
+const allItems: FAQItem[] = sections
+  .flatMap((s) => s?.items ?? [])
+  .map((it) => ({ q: ensureQ(clean(it.q)), a: clean(it.a) }))
+  .filter((it) => it.q && it.a);
+
+// absolute URL für @id stabil bestimmen
+function absPageUrl(): string | undefined {
+  try {
+    // bevorzugt: in astro.config.mjs gesetztes site
+    const site = (import.meta as any).env?.SITE;
+    if (site) return new URL(Astro.url.pathname, site).href;
+    // fallback: volle Laufzeit-URL (dev/SSR)
+    return Astro.url.href;
+  } catch {
+    return undefined;
+  }
+}
+
+const faqJsonLd =
+  allItems.length > 0
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        ...(absPageUrl() ? { "@id": absPageUrl()!.replace(/#.*$/, "") + "#faq" } : {}),
+        "mainEntity": allItems.map((it) => ({
+          "@type": "Question",
+          "name": it.q,
+          "acceptedAnswer": { "@type": "Answer", "text": it.a },
+        })),
+      }
+    : null;
 ---
+{sections.length > 0 && (
+  <section id={sections[0]?.id || "faq"} class="mt-8">
+    <h2 class="text-xl font-extrabold mb-4">{sections[0]?.headline || "FAQ"}</h2>
 
-{sections.map((sec) => (
-  <section id={sec.id} class="mt-8">
-    {sec.headline && <h2>{sec.headline}</h2>}
     <div class="space-y-4">
-      {sec.items.map((item) => (
-        <details class="rounded-card border border-border/60 p-4 shadow-soft">
-          <summary class="font-semibold cursor-pointer">{item.q}</summary>
-          <div class="mt-2 text-text2">{item.a}</div>
-        </details>
+      {sections.map((sec, idx) => (
+        <Fragment>
+          {sec?.headline && idx > 0 && (
+            <h3 class="text-lg font-semibold mt-6">{sec.headline}</h3>
+          )}
+          {(sec?.items ?? []).map((item) => (
+            <details class="rounded-card border border-border/60 p-4 shadow-soft">
+              <summary class="font-semibold cursor-pointer">
+                {ensureQ(item.q)}
+              </summary>
+              <div class="mt-2 text-text2">{item.a}</div>
+            </details>
+          ))}
+        </Fragment>
       ))}
     </div>
+
+    {faqJsonLd && (
+      <script type="application/ld+json">
+        {JSON.stringify(faqJsonLd)}
+      </script>
+    )}
   </section>
-))}
+)}
