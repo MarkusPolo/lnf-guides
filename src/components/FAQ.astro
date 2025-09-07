@@ -64,9 +64,11 @@ const faqJsonLd =
     </div>
 
     {faqJsonLd && (
-      <script type="application/ld+json">
-        {JSON.stringify(faqJsonLd)}
-      </script>
-    )}
+        <script
+            type="application/ld+json"
+            is:inline
+            set:html={JSON.stringify(faqJsonLd)}
+        />
+        )}
   </section>
 )}
