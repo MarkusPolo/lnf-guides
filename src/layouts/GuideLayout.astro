@@ -8,58 +8,104 @@ import CommentsGiscus from '../components/CommentsGiscus.astro';
 import RelatedPosts from '../components/RelatedPosts.astro';
 import PrevNext from '../components/PrevNext.astro';
 
+import {
+  buildBreadcrumbLD,
+  buildArticleLD,
+  buildFAQPage,
+  type FAQSection
+} from '../lib/schema';
+
 const { frontmatter, headings, currentSlug } = Astro.props as {
   frontmatter: any;
   headings: { depth: number; slug: string; text: string }[];
   currentSlug: string;
 };
 
-const canonical = new URL(Astro.url.pathname, Astro.site);
+const canonical = new URL(Astro.url.pathname, Astro.site).toString();
 const pubISO = new Date(frontmatter.pubDate).toISOString();
 const updISO = frontmatter.updatedDate ? new Date(frontmatter.updatedDate).toISOString() : undefined;
 
-const breadcrumbLD = {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type':'ListItem', position:1, name:'Guides', item:new URL('/guides/', Astro.site).toString() },
-    { '@type':'ListItem', position:2, name:frontmatter.category, item:new URL(`/guides/${frontmatter.category}/`, Astro.site).toString() },
-    { '@type':'ListItem', position:3, name:frontmatter.title, item:new URL(Astro.url.pathname, Astro.site).toString() }
-  ]
-};
+// Cover absolut machen (für OG+LD)
+function toAbs(u: string | undefined) {
+  try {
+    if (!u) return undefined;
+    if (/^https?:\/\//i.test(u)) return u;
+    return new URL(u, Astro.site).toString();
+  } catch { return u; }
+}
+const absCover = toAbs(frontmatter.cover);
 
-const articleLD = {
-  '@context': 'https://schema.org',
-  '@type': frontmatter?.schema?.type || 'Article',
+const breadcrumbLD = buildBreadcrumbLD([
+  { name: 'Guides', url: new URL('/guides/', Astro.site).toString() },
+  { name: frontmatter.category, url: new URL(`/guides/${frontmatter.category}/`, Astro.site).toString() },
+  { name: frontmatter.title, url: canonical },
+]);
+
+// erweitertes Article-LD: publisher/author/keywords/inLanguage
+const baseArticleLD = buildArticleLD({
+  type: frontmatter?.schema?.type || 'Article',
   headline: frontmatter.title,
   description: frontmatter.description,
   datePublished: pubISO,
-  ...(updISO ? { dateModified: updISO } : {}),
-  image: frontmatter.cover ? [frontmatter.cover] : undefined,
-  mainEntityOfPage: String(canonical)
-};
+  dateModified: updISO,
+  image: absCover ? [absCover] : undefined,
+  canonical,
+  author: { "@type": "Organization", name: "LNF Guides", url: new URL('/', Astro.site).toString() },
+  publisher: {
+    "@type": "Organization",
+    name: "LNF Guides",
+    logo: { "@type": "ImageObject", url: new URL('/images/logo.svg', Astro.site).toString() }
+  },
+  inLanguage: "en",
+  keywords: Array.isArray(frontmatter.tags) ? frontmatter.tags.join(', ') : undefined
+});
 
-if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length) {
-  Object.assign(articleLD, {
-    '@type': 'FAQPage',
-    mainEntity: frontmatter.schema.faq.map((qa: any) => ({
-      '@type': 'Question',
-      name: qa.q,
-      acceptedAnswer: { '@type': 'Answer', text: qa.a }
-    }))
-  });
-}
+// ---- FAQ: robust gegen verschiedene Quellen ----
+const faqSections = (frontmatter?.faqSections || []) as FAQSection[];
+const fallbackFAQ = frontmatter?.schema?.faq || [];
+const faqPage = buildFAQPage(faqSections, fallbackFAQ, { name: 'FAQ' });
+
+// optionale zusätzliche Schemas (Array von Objekten)
+const extraSchemas = frontmatter?.schema?.extra || [];
+
+// DEV-Check: Zahlen inlined in die Seite (kann nach Debug entfernt werden)
+const _FAQ_DEBUG = {
+  hasFaqSections: Array.isArray(faqSections),
+  faqSectionsCount: Array.isArray(faqSections) ? faqSections.length : 0,
+  fallbackFaqCount: Array.isArray(fallbackFAQ) ? fallbackFAQ.length : 0,
+  faqRendered: !!faqPage,
+};
 ---
 
-<BaseLayout title={frontmatter.title} description={frontmatter.description} canonical={canonical} ogImage={frontmatter.cover} category={frontmatter.category}>
+<BaseLayout
+  title={frontmatter.title}
+  description={frontmatter.description}
+  canonical={canonical}
+  ogImage={absCover}
+  category={frontmatter.category}
+  type="article"
+  locale="en_US"
+  imageAlt={frontmatter.title}
+  article={{
+    published: pubISO,
+    modified: updISO,
+    author: "LNF Guides",
+    section: frontmatter.category,
+    tags: frontmatter.tags
+  }}
+>
   <Fragment slot="search"><SearchOverlay /></Fragment>
 
-  <!-- Mobile-first container with safe gutters; grid collapses on mobile -->
   <div class="mx-auto max-w-7xl container-px mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(720px,760px)_1fr]">
     <div class="hidden lg:block min-w-0"><TOC headings={headings} /></div>
 
     <article class="prose prose-invert max-w-[760px] w-full">
-      <Breadcrumbs items={[{name:'Guides', href:'/guides/'},{name:frontmatter.category, href:`/guides/${frontmatter.category}/`},{name:frontmatter.title}]} />
+      <Breadcrumbs items={[
+        {name:'Guides', href:'/guides/'},
+        {name:frontmatter.category, href:`/guides/${frontmatter.category}/`},
+        {name:frontmatter.title}
+      ]} />
+
       <h1>{frontmatter.title}</h1>
       <p class="text-sm text-text2">
         <time datetime={pubISO}>{new Date(frontmatter.pubDate).toLocaleDateString('en-US')}</time>
@@ -68,17 +114,21 @@ if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length)
       </p>
 
       {frontmatter.cover && (
-        <img src={frontmatter.cover} alt={frontmatter.title} loading="lazy" decoding="async" class="w-full aspect-[16/9] object-cover rounded-card shadow-soft border border-border/60" />
+        <img
+          src={frontmatter.cover}
+          alt={frontmatter.title}
+          loading="lazy"
+          decoding="async"
+          class="w-full aspect-[16/9] object-cover rounded-card shadow-soft border border-border/60"
+        />
       )}
 
-      <!-- Ad nach Hero: stabil 16:9 auf Mobile -->
       <div class="ad-box aspect-video mt-4">
         <AdsSlot name="article-top" provider="adsense" adsClient="ca-pub-6618488631609364" adSlot="1234567890" />
       </div>
 
       <slot />
 
-      <!-- Ad am Artikelende -->
       <div class="ad-box aspect-video mt-8">
         <AdsSlot name="SidebarTop" provider="adsense" adsClient="ca-pub-6618488631609364" adSlot="1234567890" />
       </div>
@@ -180,6 +230,24 @@ if (frontmatter?.schema?.type === 'FAQPage' && frontmatter?.schema?.faq?.length)
     article.prose :where(td code) { white-space: pre-wrap; word-break: break-word; }
   </style>
 
-  <script type="application/ld+json">{JSON.stringify(articleLD)}</script>
-  <script type="application/ld+json">{JSON.stringify(breadcrumbLD)}</script>
+  <!-- JSON-LD -->
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(baseArticleLD)} />
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(breadcrumbLD)} />
+  {faqPage && <script type="application/ld+json" is:inline set:html={JSON.stringify(faqPage)} />}
+  {Array.isArray(extraSchemas) && extraSchemas.map((obj: any) => (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify(obj)} />
+  ))}
+
+  <!-- FAQ DEBUG (entfernen, sobald alles ok) -->
+  <script is:inline>
+    try {
+      window.__FAQ_DEBUG = { ...JSON.parse('{'+
+        '"hasFaqSections":' + JSON.stringify(_FAQ_DEBUG.hasFaqSections) + ',' +
+        '"faqSectionsCount":' + JSON.stringify(_FAQ_DEBUG.faqSectionsCount) + ',' +
+        '"fallbackFaqCount":' + JSON.stringify(_FAQ_DEBUG.fallbackFaqCount) + ',' +
+        '"faqRendered":' + JSON.stringify(_FAQ_DEBUG.faqRendered) +
+      '}') };
+      console.debug('[FAQ]', window.__FAQ_DEBUG);
+    } catch {}
+  </script>
 </BaseLayout>

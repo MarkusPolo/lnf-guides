@@ -1,0 +1,74 @@
+---
+// src/components/FAQ.astro
+type FAQItem = { q: string; a: string };
+type FAQSection = { id?: string; headline?: string; items?: FAQItem[] };
+
+const { sections = [], pageUrl: pageUrlProp } = Astro.props as {
+  sections?: FAQSection[];
+  pageUrl?: string; // optional – safe to ignore in MDX
+};
+
+// Resolve page URL safely inside the component (Astro is available here)
+const resolvedPageUrl =
+  typeof Astro !== "undefined" && Astro.url ? Astro.url.href : pageUrlProp;
+
+// helpers
+const ensureQ = (q: string) => {
+  if (!q) return "";
+  const t = q.trim();
+  return /[?？！]$/.test(t) ? t : t + "?";
+};
+const clean = (s: string) => (typeof s === "string" ? s.trim() : "");
+
+const allItems =
+  (sections ?? [])
+    .flatMap((s) => s?.items ?? [])
+    .map((it) => ({ q: ensureQ(clean(it.q)), a: clean(it.a) }))
+    .filter((it) => it.q && it.a);
+
+const faqJsonLd =
+  allItems.length > 0
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        ...(resolvedPageUrl ? { "@id": resolvedPageUrl.replace(/#.*$/, "") + "#faq" } : {}),
+        mainEntity: allItems.map((it) => ({
+          "@type": "Question",
+          name: it.q,
+          acceptedAnswer: { "@type": "Answer", text: it.a },
+        })),
+      }
+    : null;
+---
+
+{sections.length > 0 && (
+  <section id={sections[0]?.id || "faq"} class="mt-8">
+    <h2 class="text-xl font-extrabold mb-4">
+      {sections[0]?.headline || "FAQ"}
+    </h2>
+
+    <div class="space-y-4">
+      {sections.map((sec, i) => (
+        <Fragment>
+          {i > 0 && sec?.headline && (
+            <h3 class="text-lg font-semibold mt-6">{sec.headline}</h3>
+          )}
+          {(sec?.items ?? []).map((item) => (
+            <details class="rounded-card border border-border/60 p-4 shadow-soft">
+              <summary class="font-semibold cursor-pointer">{ensureQ(item.q)}</summary>
+              <div class="mt-2 text-text2">{item.a}</div>
+            </details>
+          ))}
+        </Fragment>
+      ))}
+    </div>
+
+    {faqJsonLd && (
+        <script
+            type="application/ld+json"
+            is:inline
+            set:html={JSON.stringify(faqJsonLd)}
+        />
+        )}
+  </section>
+)}
