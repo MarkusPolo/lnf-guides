@@ -14,11 +14,11 @@ tags:
 
 ## TL;DR
 
-If you only skim one paragraph, read this, Light No Fire is officially listed on [Steam](https://store.steampowered.com/app/2719590/Light_No_Fire/), so PC is in, nothing else is confirmed in writing yet, which is why you do not see platform logos on recent coverage, the safest working model is PC first, then PlayStation 5 and Xbox Series once Hello Games is ready to lock certification and marketing beats, Nintendo’s newer hardware is plausible later given the studio’s track record with demanding ports, but that will depend on performance budgets and engine work. Watch for quiet tells before any press release, updated store metadata, ratings board entries, or a platform badge on a new trailer, those usually land weeks before a formal date.
+> If you only skim one paragraph, read this, Light No Fire is officially listed on [Steam](https://store.steampowered.com/app/2719590/Light_No_Fire/), so PC is in, nothing else is confirmed in writing yet, which is why you do not see platform logos on recent coverage; the safest working model is PC first, then PlayStation 5 and Xbox Series once Hello Games is ready to lock certification and marketing beats. Nintendo’s newer hardware is plausible later given the studio’s track record with demanding ports, but that will depend on performance budgets and engine work. Watch for quiet tells before any press release, updated store metadata, ratings board entries, or a platform badge on a new trailer; our concise [trailer breakdown](/guides/questions/trailer-analysis/) explains what the first video actually shows.
 
 ## Will it be on PC
 
-Yes, PC is the only platform confirmed, the Steam page is live and carries the familiar “Planned Release Date, To be announced” language, which is Valve’s standard placeholder when a publisher has not committed to a window. In practical terms, that means wishlists are the main signal Hello Games will monitor while it hardens tech and plans a marketing runway, this mirrors how the team handled No Man’s Sky updates over the years, slow, steady, and data informed. Expect the usual PC ecosystem advantages at launch, flexible settings, rapid hotfix cadence, and quick iteration as telemetry flows in from early players. For readers tracking status, store page copy, date strings, and package configurations tend to change first, then you see a ratings entry, then platform partner posts, that sequence is your early warning system. You can keep an eye on the official page here, [Light No Fire on Steam](https://store.steampowered.com/app/2719590/Light_No_Fire/).
+Yes, PC is the only platform confirmed, the Steam page is live and carries the familiar “Planned Release Date, To be announced” language, which is Valve’s standard placeholder when a publisher has not committed to a window. In practical terms, that means wishlists are the main signal Hello Games will monitor while it hardens tech and plans a marketing runway, this mirrors how the team handled No Man’s Sky updates over the years, slow, steady, and data informed. Expect the usual PC ecosystem advantages at launch, flexible settings, rapid hotfix cadence, and quick iteration as telemetry flows in from early players. For readers tracking status, store page copy, date strings, and package configurations tend to change first, then you see a ratings entry, then platform partner posts, that sequence is your early warning system. If you want a compact primer on the project’s scope and claims before diving into platform specifics, see [What is Light No Fire?](/guides/questions/what-is-light-no-fire/). You can keep an eye on the official page here, [Light No Fire on Steam](https://store.steampowered.com/app/2719590/Light_No_Fire/).
 
 ## Will it be on Xbox
 
@@ -30,7 +30,7 @@ There is no Xbox announcement today, however history points to strong odds, No M
 | No Man’s Sky | Xbox One | 2018 | [Wikipedia](https://en.wikipedia.org/wiki/No_Man%27s_Sky) |  
 | No Man’s Sky | Xbox Series X/S | 2020 | [Wikipedia](https://en.wikipedia.org/wiki/No_Man%27s_Sky) |  
 
-This is not a promise for Light No Fire, it is a pattern that explains why many analysts model a staggered PC plus console plan.
+This is not a promise for Light No Fire, it is a pattern that explains why many analysts model a staggered PC plus console plan. If you want more context on how Hello Games makes platform decisions with a small team, our studio overview [Who is making Light No Fire?](/guides/questions/who-is-making-light-no-fire/) covers process and signals.
 
 ## Will it be on Playstation 5
 
