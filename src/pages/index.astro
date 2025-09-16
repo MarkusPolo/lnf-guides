@@ -8,14 +8,14 @@ const guides = (await getCollection('guides')).sort((a, b) => +new Date(b.data.p
 const news = (await getCollection('news')).sort((a, b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate)).slice(0, 3);
 ---
 
-<BaseLayout title="Master Light No Fire at launch" description="Crisp guides, spoiler-safe tips, and meta updates – built by players, for players.">
+<BaseLayout title="Light No Fire Guides" description="Guides for beginners, intermediate, and advanced players. Spoiler-safe tips, and meta updates – built by players, for players.">
   <Fragment slot="search"><SearchOverlay /></Fragment>
   <section class="mx-auto max-w-7xl px-4 mt-10 grid gap-6 md:grid-cols-2 items-center">
     <div>
-      <h1 class="text-4xl md:text-5xl font-extrabold">Master Light No Fire at launch</h1>
-      <p class="text-text2 mt-4">Crisp guides, spoiler-safe tips, and meta updates – built by players, for players.</p>
+      <h1 class="text-4xl md:text-5xl font-extrabold">Light No Fire Guides</h1>
+      <p class="text-text2 mt-4">Guides for beginners, intermediate, and advanced players. Spoiler-safe tips, and meta updates – built by players, for players.</p>
       <div class="mt-6 flex gap-3">
-        <a href="/guides/questions/" class="btn btn-primary">Read most anticipated Questions</a>
+        <a href="/guides/questions/" class="btn btn-primary">Read Guides for the most anticipated Questions</a>
         <a href="/news/" class="btn btn-outline">Latest News</a>
       </div>
     </div>
