@@ -85,5 +85,5 @@ const articleLD = {
     <div class="hidden lg:block"></div>
   </section>
 
-  <script type="application/ld+json">{JSON.stringify(articleLD)}</script>
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(articleLD)} />
 </BaseLayout>
