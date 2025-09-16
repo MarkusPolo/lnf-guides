@@ -1,4 +1,5 @@
 ---
+import LNFImage from './LNFImage.astro';
 interface Props {
   href: string;
   title: string;
@@ -28,12 +29,11 @@ const imgSrc = resolveSrc(cover);
   <!-- Gleiches Media-Ratio überall -->
   <div class="relative w-full aspect-[16/9] overflow-hidden">
     {imgSrc ? (
-      <img
+      <LNFImage
         src={imgSrc}
         alt={title}
-        loading="lazy"
-        decoding="async"
-        class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+        class="w-full h-full object-cover"
+        priority={true}
       />
     ) : (
       <div class="w-full h-full bg-[#111624]"></div>

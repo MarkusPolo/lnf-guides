@@ -1,0 +1,84 @@
+---
+import { Image } from "astro:assets";
+
+type Props = {
+  /** Entweder importiertes Asset (empfohlen) oder String-URL (z. B. aus Content) */
+  src: any;
+  alt: string;
+  class?: string;
+  /** LCP/Hero → eager + fetchpriority=high */
+  priority?: boolean;
+  /** Für responsive Ausgabe (nur für Image-Pipeline relevant) */
+  widths?: number[];
+  formats?: ("avif" | "webp" | "png" | "jpeg")[];
+  sizes?: string;
+};
+
+const {
+  src,
+  alt,
+  class: className = "",
+  priority = false,
+  widths = [320, 480, 640, 768, 960],     // reicht für deine 16:9 Karten (~473px Zielbreite)
+  formats = ["avif", "webp"],
+  sizes = "(max-width: 640px) 94vw, 473px",
+} = Astro.props as Props;
+
+/** Ist es ein importiertes Asset-Objekt (mit width/height/src)? */
+const isImported =
+  src &&
+  typeof src === "object" &&
+  (typeof src.src === "string" || typeof src.src === "object") &&
+  (typeof src.width === "number" || typeof src.heights === "number");
+
+/** String-Quelle → als „remote“ behandeln, mit inferSize */
+const isStringSrc = typeof src === "string";
+
+/** Absolute URL für String-Quelle auflösen (wichtig für inferSize bei Build) */
+const site = Astro.site?.origin ?? "https://www.lnfguides.com";
+const absUrl = isStringSrc
+  ? (/^https?:\/\//i.test(src) ? src : new URL(src, site).toString())
+  : undefined;
+---
+
+{isImported ? (
+  /* Importiertes Asset → Astro kennt Dimensionen automatisch (kein CLS) */
+  <Image
+    src={src}
+    alt={alt}
+    class={className}
+    widths={widths}
+    formats={formats}
+    sizes={sizes}
+    loading={priority ? "eager" : "lazy"}
+    decoding="async"
+    fetchpriority={priority ? "high" : "auto"}
+  />
+) : isStringSrc ? (
+  /* String/„remote“ → inferSize besorgt width/height; benötigt remotePatterns (siehe astro.config) */
+  <Image
+    src={absUrl!}
+    alt={alt}
+    widths={widths}
+    formats={formats}
+    sizes={sizes}
+    inferSize={true}
+    loading={priority ? "eager" : "lazy"}
+    decoding="async"
+    fetchpriority={priority ? "high" : "auto"}
+    class={className}
+  />
+) : (
+  /* Fallback */
+  <img
+    src=""
+    alt={alt}
+    class={className}
+    loading={priority ? "eager" : "lazy"}
+    decoding="async"
+    fetchpriority={priority ? "high" : "auto"}
+    width="1"
+    height="1"
+    style="opacity:0;pointer-events:none"
+  />
+)}

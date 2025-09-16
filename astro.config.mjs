@@ -29,6 +29,17 @@ const copySitemap = () => ({
 
 export default defineConfig({
   site: SITE,
+  // Wichtig für <Image inferSize /> bei String/„remote“-Quellen:
+  image: {
+    remotePatterns: [
+      // Produktion
+      { protocol: 'https', hostname: 'lnfguides.com' },
+      { protocol: 'https', hostname: 'www.lnfguides.com' },
+      // Lokale Entwicklung
+      { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'http', hostname: '127.0.0.1' },
+    ],
+  },
   integrations: [sitemap(), mdx(), copySitemap()],
   server: { host: true },
   vite: {

@@ -2,6 +2,14 @@
 import "../styles/global.css";
 import ConsentBanner from "../components/ConsentBanner.astro";
 
+type ArticleMeta = {
+  published?: string;
+  modified?: string;
+  author?: string;
+  section?: string;
+  tags?: string[];
+};
+
 const {
   title,
   description,
@@ -9,14 +17,35 @@ const {
   ogImage,
   type = "website",
   category,
-  // NEU: optionale SEO/SM-Props
   robots = "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
   locale = "en_US",
   imageAlt,
   twitterSite,
   twitterCreator,
-  // OG:article Daten (nur wenn type==="article")
-  article
+  article,
+  /**
+   * Optional: LCP-Preload-Konfiguration für das führende Bild der Seite.
+   * Beispiel:
+   * lcpPreload: {
+   *   imagesrcset: "/images/hero-320.avif 320w, /images/hero-480.avif 480w, /images/hero-640.avif 640w",
+   *   imagesizes: "(max-width: 640px) 94vw, 473px"
+   * }
+   */
+  lcpPreload
+}: {
+  title?: string;
+  description?: string;
+  canonical?: string;
+  ogImage?: string;
+  type?: "website" | "article";
+  category?: string;
+  robots?: string;
+  locale?: string;
+  imageAlt?: string;
+  twitterSite?: string;
+  twitterCreator?: string;
+  article?: ArticleMeta;
+  lcpPreload?: { imagesrcset: string; imagesizes?: string };
 } = Astro.props as any;
 
 const site = Astro.site?.origin ?? "https://www.lnfguides.com";
@@ -28,10 +57,10 @@ const ogFallbackByCategory: Record<string, string> = {
   dragons: "/images/og/dragons.png",
   beginners: "/images/og/beginners.png",
 };
-const rawOg = ogImage || ogFallbackByCategory[category] || "/images/og/default.png";
+const rawOg = ogImage || ogFallbackByCategory[category ?? ""] || "/images/og/default.png";
 
 // absolute Bild-URL erzwingen
-function toAbs(u: string) {
+function toAbs(u?: string) {
   try {
     if (!u) return undefined;
     if (/^https?:\/\//i.test(u)) return u;
@@ -40,7 +69,7 @@ function toAbs(u: string) {
 }
 const finalOgAbs = toAbs(rawOg);
 
-// IDs – prüfe beide
+// IDs
 const FC_PUBLISHER_ID = "pub-6618488631609364";
 const ADSENSE_CLIENT = "ca-pub-6618488631609364";
 ---
@@ -73,7 +102,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
         {article.modified && <meta property="article:modified_time" content={article.modified} />}
         {article.author && <meta property="article:author" content={article.author} />}
         {article.section && <meta property="article:section" content={article.section} />}
-        {Array.isArray(article.tags) && article.tags.map((t: string) => (
+        {Array.isArray(article.tags) && article.tags.map((t) => (
           <meta property="article:tag" content={t} />
         ))}
       </>
@@ -95,13 +124,24 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
-    <!-- Preconnect (sparsam, nur wiederkehrende Origins) -->
-    <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin />
-    <link rel="preconnect" href="https://giscus.app" crossorigin />
+    <!-- LCP: optionales Preload (nur wenn lcpPreload gesetzt) -->
+    {lcpPreload && (
+      <link
+        rel="preload"
+        as="image"
+        imagesrcset={lcpPreload.imagesrcset}
+        imagesizes={lcpPreload.imagesizes ?? "(max-width: 640px) 94vw, 473px"}
+        fetchpriority="high"
+      />
+    )}
 
-    <!-- Styles -->
-    <link id="giscus-css" rel="stylesheet" href="https://giscus.app/default.css" />
-    <link rel="stylesheet" href="/_astro/_slug_.DwxKGs8r.css" />
+    <!-- Styles: Haupt-CSS non-blocking via preload+swap -->
+    <link rel="preload" as="style" href="/_astro/_slug_.Du0I1rql.css" onload="this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/_astro/_slug_.Du0I1rql.css"></noscript>
+    <!-- Entfernt: leeren/0B-CSS-Chuck nicht laden -->
+
+    <!-- KEINE preconnects ohne Consent!
+         Wir injizieren preconnects dynamisch nach Opt-in (siehe unten). -->
 
     <!-- JSON-LD: WebSite -->
     <script
@@ -132,7 +172,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
         sameAs: ["https://github.com/lnf-guides"]
       })} />
 
-    <!-- FC present iframe: muss vor FC-Skript garantiert existieren -->
+    <!-- FC present iframe (vor FC-Skript) -->
     <script>
       (function ensureGooglefcPresent(){
         function inject(){
@@ -141,10 +181,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
             var f=document.createElement('iframe');
             f.name='googlefcPresent';
             f.style='width:0;height:0;border:0;display:none';
-            document.body ? document.body.appendChild(f)
-                          : document.addEventListener('DOMContentLoaded', function(){ 
-                              try{ document.body.appendChild(f); }catch(e){}
-                            }, {once:true});
+            (document.body||document.documentElement).appendChild(f);
           }catch(e){}
         }
         if (document.readyState === 'loading') {
@@ -183,47 +220,13 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
       })();
     </script>
 
-    <!-- Funding Choices (CMP) -->
+    <!-- Funding Choices (CMP) – darf vor Consent geladen werden -->
     <script async src={"https://fundingchoicesmessages.google.com/i/" + FC_PUBLISHER_ID + "?ers=1"}></script>
-    <script>
-      (function signalGooglefcPresent() {
-        function inject(){
-          try{
-            if (!window.frames['googlefcPresent']) {
-              const iframe = document.createElement('iframe');
-              iframe.style = 'width:0;height:0;border:0;display:none';
-              iframe.name = 'googlefcPresent';
-              document.body.appendChild(iframe);
-            }
-          }catch(e){}
-        }
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', inject, { once:true });
-          window.addEventListener('load', inject, { once:true });
-        } else {
-          inject();
-        }
-      })();
-    </script>
 
-    <script>
-      (function forceFC(){
-        var started = Date.now();
-        var tm = setInterval(function(){
-          if (typeof __tcfapi === 'function') {
-            try { __tcfapi('displayConsentUi', 2, function(){}); } catch(e){}
-            clearInterval(tm);
-          } else if (Date.now() - started > 15000) {
-            clearInterval(tm);
-            console.warn('FC: __tcfapi nicht verfügbar (Timeout).');
-          }
-        }, 250);
-      })();
-    </script>
-
-    <!-- LNF Consent Bridge (für Analytics/Embeds) -->
+    <!-- Signalisierung/TCF ohne aggressives Auto-Open -->
     <script>
       (function(){
+        // Mini Consent-API (liest Entscheidungen zusammen)
         var LS_KEYS = ['lnf-consent-1','lnf-consent-v1','lnf-consent'];
         function readAny(){
           for (var i=0;i<LS_KEYS.length;i++){
@@ -232,17 +235,15 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
           return null;
         }
         function getDecisions(){
-          try{
+          try {
             var via = window.consent && typeof window.consent.get==='function' ? window.consent.get() : null;
             if (via && (via.analytics!==undefined || via.external!==undefined || via.ads!==undefined)) return {
               analytics: !!via.analytics, external: !!via.external, ads: !!via.ads, adsPersonalized: !!via.adsPersonalized
             };
-          }catch(e){}
+          } catch(e){}
           var rec = readAny();
           var d = rec && rec.decisions ? rec.decisions : null;
-          if (d) return {
-            analytics: !!d.analytics, external: !!d.external, ads: !!d.ads, adsPersonalized: !!d.adsPersonalized
-          };
+          if (d) return { analytics: !!d.analytics, external: !!d.external, ads: !!d.ads, adsPersonalized: !!d.adsPersonalized };
           return { analytics:false, external:false, ads:false, adsPersonalized:false };
         }
         var listeners = new Set();
@@ -250,14 +251,14 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
           var d = getDecisions();
           listeners.forEach(function(fn){ try{ fn(d); }catch(e){} });
           try {
-            window.dispatchEvent(new CustomEvent('consent:changed', { detail: d })); 
+            window.dispatchEvent(new CustomEvent('consent:changed', { detail: d }));
             window.dispatchEvent(new Event('consent:updated'));
           } catch(e){}
         }
         window.lnfConsent = {
           get: getDecisions,
           allowed: function(key){ var d=getDecisions(); return !!d[key]; },
-          on: function(cb){ if (typeof cb==='function'){ listeners.add(cb); } },
+          on: function(cb){ if (typeof cb==='function') listeners.add(cb); },
           off: function(cb){ listeners.delete(cb); }
         };
         window.addEventListener('storage', function(ev){
@@ -268,152 +269,82 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
       })();
     </script>
 
-    <!-- Vercel Web Analytics: nur bei Opt-in -->
-    <script id="vercel-analytics-loader">
+    <!-- KEIN Auto-Open der Privacy-UIs mehr; nur auf Nutzeraktion.
+         Drittskripte & preconnects NACH Consent via Idle-Callback. -->
+    <script>
       (function(){
-        var loaded = false;
-        window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments); };
-        function allowed(){ try { return !!(window.lnfConsent && window.lnfConsent.allowed('analytics')); } catch(e){ return false; } }
-        function load(){
-          if (loaded || !allowed()) return;
-          loaded = true;
-          var s = document.createElement('script');
-          s.defer = true;
-          s.src = '/_vercel/insights/script.js';
-          s.id = 'vercel-analytics-script';
-          document.head.appendChild(s);
+        function onIdle(fn){ (window.requestIdleCallback || function(cb){ setTimeout(cb, 1200); })(fn); }
+
+        function addPreconnect(href, crossorigin){
+          try{
+            var l = document.createElement('link');
+            l.rel = 'preconnect';
+            l.href = href;
+            if (crossorigin) l.crossOrigin = 'anonymous';
+            document.head.appendChild(l);
+          }catch(e){}
         }
-        if (allowed()) load();
-        try { window.lnfConsent && window.lnfConsent.on(function(d){ if (d && d.analytics) load(); }); } catch(e){}
-        window.addEventListener('consent:changed', function(ev){ if (ev?.detail?.analytics) load(); }, { passive: true });
-        document.readyState === 'loading'
-          ? document.addEventListener('DOMContentLoaded', function(){ if (allowed()) load(); }, { once:true })
-          : Promise.resolve().then(function(){ if (allowed()) load(); });
+        function addStylesheet(href, id){
+          try{
+            if (id && document.getElementById(id)) return;
+            var l = document.createElement('link');
+            l.rel = 'preload';
+            l.as = 'style';
+            l.href = href;
+            if (id) l.id = id + '-preload';
+            l.onload = function(){ this.rel='stylesheet'; this.onload=null; };
+            document.head.appendChild(l);
+            var no = document.createElement('noscript');
+            no.innerHTML = '<link rel="stylesheet" href="'+href+'">';
+            document.head.appendChild(no);
+          }catch(e){}
+        }
+
+        function applyConsentOptimizations(d){
+          // PRECONNECTS NUR NACH CONSENT
+          if (d && d.ads) {
+            addPreconnect('https://pagead2.googlesyndication.com', true);
+          }
+          if (d && d.external) {
+            addPreconnect('https://giscus.app', true);
+          }
+          if (d && d.analytics) {
+            // Falls Google Fonts/Analytics extern nötig wären – hier erst preconnecten.
+            addPreconnect('https://fonts.gstatic.com', true);
+            addPreconnect('https://fonts.googleapis.com', false);
+          }
+
+          // Third-Party CSS/JS erst nach Opt-in laden
+          if (d && d.external) {
+            // giscus CSS (nicht render-blockend)
+            addStylesheet('https://giscus.app/default.css', 'giscus-css');
+          }
+        }
+
+        // Initial & on change
+        onIdle(function(){ try { applyConsentOptimizations(window.lnfConsent && window.lnfConsent.get()); } catch(e){} });
+        window.addEventListener('consent:changed', function(ev){ try { applyConsentOptimizations(ev.detail || {}); } catch(e){} }, { passive:true });
       })();
     </script>
 
-    <!-- AdSense: IMMER laden (PA/NPA/LTD via Consent Mode + TCF-String) -->
+    <!-- AdSense: IMMER laden (PA/NPA/LTD via Consent Mode/TCF) – keine preconnects vor Consent -->
     <script
       async
       src={"https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + ADSENSE_CLIENT}
       crossOrigin="anonymous"
     ></script>
-
-    <!-- Privacy / Consent Orchestrierung -->
-    <script>
-      (function(){
-        var OPEN_TIMEOUT_MS = 8000; 
-        function openLocal(){ try{ window.consentUI?.open('settings'); }catch(e){} }
-
-        function tryFC(cb){
-          try {
-            window.googlefc = window.googlefc || {};
-            window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
-            window.googlefc.callbackQueue.push(function(){
-              try{
-                if (typeof googlefc.showRevocationMessage === 'function') {
-                  googlefc.showRevocationMessage();
-                  cb(true); return;
-                }
-              }catch(e){}
-              cb(false);
-            });
-          } catch(e){ cb(false); }
-        }
-
-        function tryTCF(cb){
-          try{
-            if (typeof __tcfapi === 'function') {
-              __tcfapi('getTCData', 2, function(data, success){
-                if (success && data && data.tcString && data.tcString.length > 10) {
-                  cb(true);
-                } else {
-                  try { __tcfapi('displayConsentUi', 2, function(){}); } catch(e){}
-                  cb(true);
-                }
-              });
-              return;
-            }
-          }catch(e){}
-          cb(false);
-        }
-
-        function openPrivacy(){
-          var done=false;
-          var t=setTimeout(function(){ if(!done){ done=true; openLocal(); }}, OPEN_TIMEOUT_MS);
-          function finish(ok){ if(!done){ done=true; clearTimeout(t); if(!ok) openLocal(); } }
-
-          tryFC(function(fcOk){
-            if (fcOk) return finish(true);
-            tryTCF(function(tcfOk){
-              if (tcfOk) return finish(true);
-              finish(false);
-            });
-          });
-        }
-
-        document.addEventListener('click', function(ev){
-          var t = ev.target && ev.target.closest && ev.target.closest('[data-privacy-open]');
-          if (!t) return;
-          ev.preventDefault();
-          openPrivacy();
-        });
-
-        window.addEventListener('load', function(){
-          var tried=false;
-          function attempt(){
-            if (tried) return; tried=true;
-            if (typeof __tcfapi === 'function') {
-              try {
-                __tcfapi('getTCData', 2, function(data, success){
-                  if (!success || !data || !data.tcString) openPrivacy();
-                });
-              } catch(e){ openPrivacy(); }
-            } else {
-              openPrivacy();
-            }
-          }
-          setTimeout(attempt, 400);
-        }, { once:true });
-
-        window.managePrivacy = openPrivacy;
-      })();
-    </script>
-
-    <script>
-      (function(){
-        window.googlefc = window.googlefc || {};
-        window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
-        window.googlefc.callbackQueue.push(function(){
-          console.log('[FC] initialized:', typeof googlefc.showRevocationMessage === 'function');
-        });
-
-        var tm = setInterval(function(){
-          if (typeof __tcfapi === 'function') {
-            console.log('[TCF] __tcfapi available');
-            __tcfapi('getTCData', 2, function(tc, ok){
-              console.log('[TCF] getTCData ok=%o tcString=%o', ok, tc && tc.tcString);
-            });
-            clearInterval(tm);
-          }
-        }, 500);
-      })();
-    </script>
   </head>
 
   <body class="font-sans bg-bg text-text overflow-x-hidden">
     <a
       href="#content"
       class="sr-only focus:not-sr-only focus:fixed focus:left-[max(1rem,env(safe-area-inset-left))] focus:top-4 focus:bg-surface focus:px-3 focus:py-2 focus:rounded"
-      >Skip to content</a
-    >
+    >Skip to content</a>
 
     <header
       class="sticky top-0 z-[1000] isolate border-b border-border/60 bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/70"
     >
-      <div
-        class="mx-auto max-w-7xl px-4 sm:px-5 py-3 flex items-center gap-4 min-w-0"
-      >
+      <div class="mx-auto max-w-7xl px-4 sm:px-5 py-3 flex items-center gap-4 min-w-0">
         <a href="/" class="flex items-center gap-2 shrink-0">
           <img src="/images/logo.svg" alt="LNF Guides" class="h-7 w-7" />
           <span class="text-lg font-extrabold tracking-tight">LNF Guides</span>
@@ -425,8 +356,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
             class="w-full truncate text-left border border-border/60 rounded-full px-4 py-2 text-text2 hover:bg-surface"
             aria-label="Open search (Cmd/Ctrl+K)"
             type="button"
-            >Press ⌘/Ctrl K to search…</button
-          >
+          >Press ⌘/Ctrl K to search…</button>
         </div>
 
         <nav class="flex items-center gap-3 flex-wrap text-sm">
@@ -441,8 +371,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
             type="button"
             role="button"
             aria-label="Privacy settings"
-            >Privacy settings</button
-          >
+          >Privacy settings</button>
         </nav>
       </div>
     </header>
@@ -453,9 +382,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
     </main>
 
     <footer class="mt-16 border-t border-border/60">
-      <div
-        class="mx-auto max-w-7xl px-4 sm:px-5 py-12 grid gap-8 md:grid-cols-4 text-sm"
-      >
+      <div class="mx-auto max-w-7xl px-4 sm:px-5 py-12 grid gap-8 md:grid-cols-4 text-sm">
         <section>
           <h3 class="font-semibold mb-3">Site</h3>
           <ul class="space-y-2">
@@ -493,79 +420,52 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
       );
     </script>
 
-    <!-- Opener: 1) Funding Choices, 2) TCF displayConsentUi, 3) lokales UI — mit Watchdog -->
+    <!-- Privacy-Opener: NUR auf Klick; kein Auto-Open -->
     <script>
       (function(){
-        function callWhenReady(fn, timeout){
-          var done = false;
-          var timer = setTimeout(function(){ if (!done) fn(false); }, timeout || 1500);
-          return function(ok){
-            if (!done){ done = true; clearTimeout(timer); fn(!!ok); }
-          };
-        }
-
-        function tryOpenFundingChoices(cb){
-          try {
-            window.googlefc = window.googlefc || {};
-            window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
-            window.googlefc.callbackQueue.push(function() {
-              try {
-                if (typeof googlefc.showRevocationMessage === 'function') {
-                  googlefc.showRevocationMessage();
-                  cb(true); return;
-                }
-              } catch(e){}
-              cb(false);
-            });
-          } catch(e){ cb(false); }
-        }
-
-        function tryOpenTCF(cb){
-          try {
-            if (typeof __tcfapi === 'function') {
-              __tcfapi('displayConsentUi', 2, function(){});
-              cb(true); return;
-            }
-          } catch(e){}
-          cb(false);
-        }
-
         function openPrivacy(){
-          tryOpenFundingChoices(callWhenReady(function(fcOk){
-            if (fcOk) return;
-            tryOpenTCF(callWhenReady(function(tcfOk){
-              if (tcfOk) return;
-              if (window.consentUI && typeof window.consentUI.open === 'function') {
-                window.consentUI.open('settings');
+          // 1) Funding Choices
+          function tryFC(cb){
+            try {
+              window.googlefc = window.googlefc || {};
+              window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
+              window.googlefc.callbackQueue.push(function(){
+                try{
+                  if (typeof googlefc.showRevocationMessage === 'function') {
+                    googlefc.showRevocationMessage();
+                    cb(true); return;
+                  }
+                }catch(e){}
+                cb(false);
+              });
+            } catch(e){ cb(false); }
+          }
+          // 2) IAB TCF
+          function tryTCF(cb){
+            try {
+              if (typeof __tcfapi === 'function') {
+                __tcfapi('displayConsentUi', 2, function(){});
+                cb(true); return;
               }
-            }, 800));
-          }, 1200));
+            } catch(e){}
+            cb(false);
+          }
+          var done=false;
+          function finish(){ if (!done){ done=true; try{ window.consentUI?.open?.('settings'); }catch(e){} } }
+          tryFC(function(ok){ if (ok) return; tryTCF(function(ok2){ if (ok2) return; finish(); }); });
         }
 
         document.addEventListener('click', function(ev){
-          const t = ev.target?.closest?.('[data-privacy-open]');
+          var t = ev.target && ev.target.closest && ev.target.closest('[data-privacy-open]');
           if (!t) return;
           ev.preventDefault();
           openPrivacy();
         });
-
-        window.managePrivacy = openPrivacy;
-
-        window.addEventListener('load', function(){
-          try {
-            if (typeof __tcfapi === 'function') {
-              __tcfapi('getTCData', 2, function(tcData, success){
-                if (!success || !tcData || !tcData.tcString) openPrivacy();
-              });
-            } else {
-              setTimeout(openPrivacy, 600);
-            }
-          } catch(e){}
-        }, { once:true });
+        // Kein Auto-Open bei load!
       })();
     </script>
 
-    <!-- Externe Embeds: Consent-Record führend -->
+    <!-- Externe Embeds Opt-in Brücke -->
     <script>
       (function(){
         window.lnfExternal = {
@@ -588,6 +488,31 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
             } catch(e){}
           }
         };
+      })();
+    </script>
+
+    <!-- Vercel Analytics: nur bei Opt-in (Analytics) -->
+    <script>
+      (function(){
+        var loaded = false;
+        window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments); };
+        function allowed(){ try { return !!(window.lnfConsent && window.lnfConsent.allowed('analytics')); } catch(e){ return false; } }
+        function load(){
+          if (loaded || !allowed()) return;
+          loaded = true;
+          var s = document.createElement('script');
+          s.defer = true;
+          s.src = '/_vercel/insights/script.js';
+          s.id = 'vercel-analytics-script';
+          document.head.appendChild(s);
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', function(){ if (allowed()) load(); }, { once:true });
+        } else {
+          Promise.resolve().then(function(){ if (allowed()) load(); });
+        }
+        try { window.lnfConsent && window.lnfConsent.on(function(d){ if (d && d.analytics) load(); }); } catch(e){}
+        window.addEventListener('consent:changed', function(ev){ if (ev?.detail?.analytics) load(); }, { passive: true });
       })();
     </script>
 
