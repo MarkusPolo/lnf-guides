@@ -122,7 +122,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
     <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png" />
     <link rel="icon" href="/favicon-192x192.png" sizes="192x192" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/site.webmanifest" />
+    <link id="site-manifest" rel="manifest" href="/site.webmanifest" />
 
     <!-- LCP: optionales Preload (nur wenn lcpPreload gesetzt) -->
     {lcpPreload && (
@@ -273,57 +273,59 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
          Drittskripte & preconnects NACH Consent via Idle-Callback. -->
     <script>
       (function(){
-        function onIdle(fn){ (window.requestIdleCallback || function(cb){ setTimeout(cb, 1200); })(fn); }
+        const added = new Set();
+        const LIMIT = 4; // hartes Cap
 
-        function addPreconnect(href, crossorigin){
+        function originOf(url){
+          try{ const u = new URL(url, location.origin); return u.origin; }catch(e){ return null; }
+        }
+
+        function addPreconnectJustInTime(url){
           try{
-            var l = document.createElement('link');
+            const org = originOf(url);
+            if (!org || added.has(org) || added.size >= LIMIT) return;
+            const l = document.createElement('link');
             l.rel = 'preconnect';
-            l.href = href;
-            if (crossorigin) l.crossOrigin = 'anonymous';
+            l.href = org + '/';
+            if (org.startsWith('https://')) l.crossOrigin = 'anonymous';
             document.head.appendChild(l);
+            added.add(org);
           }catch(e){}
         }
-        function addStylesheet(href, id){
-          try{
+
+        // CSS/JS Loader, die zuerst preconnecten:
+        window.__LNF_loadStyle = function(href, id){
+          try {
+            addPreconnectJustInTime(href);
             if (id && document.getElementById(id)) return;
-            var l = document.createElement('link');
+            const l = document.createElement('link');
             l.rel = 'preload';
             l.as = 'style';
             l.href = href;
             if (id) l.id = id + '-preload';
             l.onload = function(){ this.rel='stylesheet'; this.onload=null; };
             document.head.appendChild(l);
-            var no = document.createElement('noscript');
+            const no = document.createElement('noscript');
             no.innerHTML = '<link rel="stylesheet" href="'+href+'">';
             document.head.appendChild(no);
           }catch(e){}
-        }
+        };
 
-        function applyConsentOptimizations(d){
-          // PRECONNECTS NUR NACH CONSENT
-          if (d && d.ads) {
-            addPreconnect('https://pagead2.googlesyndication.com', true);
-          }
-          if (d && d.external) {
-            addPreconnect('https://giscus.app', true);
-          }
-          if (d && d.analytics) {
-            // Falls Google Fonts/Analytics extern nötig wären – hier erst preconnecten.
-            addPreconnect('https://fonts.gstatic.com', true);
-            addPreconnect('https://fonts.googleapis.com', false);
-          }
+        window.__LNF_loadScript = function(src, opts){
+          try {
+            addPreconnectJustInTime(src);
+            const s = document.createElement('script');
+            s.src = src;
+            if (opts && opts.async) s.async = true;
+            if (opts && opts.defer) s.defer = true;
+            if (opts && opts.id) s.id = opts.id;
+            if (opts && opts.crossorigin) s.crossOrigin = 'anonymous';
+            document.head.appendChild(s);
+          }catch(e){}
+        };
 
-          // Third-Party CSS/JS erst nach Opt-in laden
-          if (d && d.external) {
-            // giscus CSS (nicht render-blockend)
-            addStylesheet('https://giscus.app/default.css', 'giscus-css');
-          }
-        }
-
-        // Initial & on change
-        onIdle(function(){ try { applyConsentOptimizations(window.lnfConsent && window.lnfConsent.get()); } catch(e){} });
-        window.addEventListener('consent:changed', function(ev){ try { applyConsentOptimizations(ev.detail || {}); } catch(e){} }, { passive:true });
+        // Exponiere begrenzt
+        window.__LNF_preconnect = function(url){ addPreconnectJustInTime(url); };
       })();
     </script>
 
