@@ -1,0 +1,109 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import LNFMap from "../components/LNFMap";
+import { LNF_MAP } from "../data/lnf-map.data";
+
+const updated = new Date(LNF_MAP.lastUpdatedISO).toLocaleDateString("en-GB", {
+  year: "numeric", month: "short", day: "numeric"
+});
+
+const title = `Light No Fire Interactive Map – Pre-Release (Updated ${updated})`;
+const description = "Speculative interactive map for Light No Fire. Trailer-based biomes, creatures, and POIs. Updated as we learn more.";
+const ogImage = "/images/og/lnf-map-og.webp";
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  canonical={"https://www.lnfguides.com/light-no-fire-map/"}
+  ogImage={ogImage}
+  type="website"
+  imageAlt="Light No Fire pre-release interactive map with markers"
+>
+  <main class="mx-auto max-w-6xl container-px py-10">
+    <header class="mb-6">
+      <h1 class="text-3xl font-extrabold tracking-tight">
+        Light No Fire Interactive Map <span class="text-text2 text-xl">(Pre-Release)</span>
+      </h1>
+      <div class="mt-2 flex items-center gap-3 text-sm text-text2">
+        <span class="inline-flex items-center gap-2 rounded-full border border-border/60 px-3 py-1">
+          Speculative
+        </span>
+        <span>Updated {updated}</span>
+      </div>
+      {LNF_MAP.disclaimerHtml && (
+        <p class="mt-3 text-sm text-text2" set:html={LNF_MAP.disclaimerHtml} />
+      )}
+    </header>
+
+    <!-- Layer-Toggles/Filter kommen in Schritt 2 -->
+    <section class="mb-10">
+      <LNFMap client:load config={LNF_MAP} />
+    </section>
+
+    <section class="prose">
+      <h2>Everything we know so far</h2>
+      <p>
+        <strong>Light No Fire</strong> is described as adventure, building, survival and exploration on a
+        <em>procedural, Earth-scale fantasy planet</em>, with multiplayer and persistent building. That means there
+        won’t be a single, fixed minimap. This pre-release tool visualizes <em>what we can infer from public material</em>
+        (mainly the first trailer) — biomes, structures, creatures and points of interest — and will be updated as new
+        information emerges.
+      </p>
+      <p>
+        Looking for more details? Try our
+        <a href="/what-is-light-no-fire/">introductory guide</a>,
+        <a href="/trailer-breakdown-what-does-the-first-light-no-fire-trailer-reveal/">trailer breakdown</a>,
+        and <a href="/light-no-fire-platforms/">platforms overview</a>.
+      </p>
+
+      <h3>How to read this map</h3>
+      <ul>
+        <li><strong>Markers</strong> are placed illustratively on a speculative base world image.</li>
+        <li><strong>Confidence</strong> from 0.2 to 1.0 shows how certain a marker is.</li>
+        <li>Sources link to the <em>timestamp or note</em> we used (e.g. “Trailer 01:07”).</li>
+      </ul>
+
+      <h3>What’s next</h3>
+      <p>
+        As we get more footage or dev info, we’ll add <strong>layer toggles, tag search and confidence filters</strong>.
+        On launch, this tool will evolve into a <strong>community map</strong> (resources, creatures, player structures).
+        Want to help? Send us timestamps and observations — we’ll credit contributors.
+      </p>
+    </section>
+
+    <section class="prose mt-10">
+      <h2>Changelog</h2>
+      <ul>
+        <li>{updated}: Added “Dragon flight scene” and “Lush forest &amp; river” markers.</li>
+        <li>Sep 15, 2025: Initial pre-release map published.</li>
+      </ul>
+    </section>
+  </main>
+
+  <!-- FAQ JSON-LD -->
+  <script type="application/ld+json" is:inline>
+    {JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is this the official Light No Fire map?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. This is a speculative, pre-release map based on trailer analysis and public information. It will be updated as new details emerge."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Will Light No Fire have a fixed map?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The game is described as procedural and Earth-scale. Expect highly variable worlds; this tool visualizes known elements for discovery and discussion."
+          }
+        }
+      ]
+    })}
+  </script>
+</BaseLayout>

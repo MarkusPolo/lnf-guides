@@ -1,7 +1,9 @@
+// astro.config.mjs
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import mdx from '@astrojs/mdx';
 import tailwindcss from '@tailwindcss/vite';
+import react from '@astrojs/react'; // ⬅️ NEU
 
 // Domain später anpassen
 const SITE = 'https://lnfguides.com';
@@ -40,7 +42,8 @@ export default defineConfig({
       { protocol: 'http', hostname: '127.0.0.1' },
     ],
   },
-  integrations: [sitemap(), mdx(), copySitemap()],
+  // ⬇️ REIHENFOLGE egal; Hauptsache react() ist dabei
+  integrations: [react(), sitemap(), mdx(), copySitemap()],
   server: { host: true },
   vite: {
     plugins: [tailwindcss()],
