@@ -15,8 +15,8 @@ export type MarkerCategory =
 
 export interface MediaItem {
   id: string;                   // "snow-bridge-01"
-  thumbUrl: string;             // small image (e.g. 320-640px wide)
-  fullUrl: string;              // larger image (e.g. 1280-1920px wide)
+  thumbUrl: string;             // small image
+  fullUrl: string;              // large image
   caption?: string;             // "Snowy bridge from first trailer"
   timecode?: string;            // "00:41"
   source?: "trailer" | "screenshot" | "concept" | "community";
@@ -26,13 +26,13 @@ export interface MapMarker {
   id: string;                       // "snowy-peaks-bridge"
   title: string;                    // "Snowy mountain + stone bridge"
   category: MarkerCategory;
-  position: [number, number];       // [x, y] in image px coords
+  position: [number, number];       // [x, y] image coords in px
   confidence: 0.2 | 0.4 | 0.6 | 0.8 | 1.0;
   sources: MapSourceRef[];
   notes?: string;
-  tags?: string[];
-  thumbUrl?: string;                // optional primary thumb
-  media?: MediaItem[];              // ⬅️ NEW: gallery
+  tags?: string[];                  // lower-kebab-case: ["dead-trees","snow"]
+  thumbUrl?: string;
+  media?: MediaItem[];
 }
 
 export interface MapLayer {
@@ -54,4 +54,6 @@ export interface MapConfig {
   layers: MapLayer[];
   lastUpdatedISO: string;
   disclaimerHtml?: string;
+  lang?: "en" | "de";
+  video?: { youtubeId: string };    // centralized trailer ref for timestamps
 }

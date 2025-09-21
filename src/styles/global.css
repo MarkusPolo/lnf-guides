@@ -117,3 +117,21 @@ code, pre { font-family: var(--font-mono); }
 
 /* Header nav wrapping on small screens */
 header nav a, header nav button { white-space: nowrap; }
+
+/* --- LNF Leaflet tooltips --- */
+.leaflet-tooltip.lnf-tooltip {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 2px solid var(--color-border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-soft);
+  padding: .5rem .6rem;
+  font-size: 18.5px;
+  line-height: 1.75;
+}
+.leaflet-tooltip.lnf-tooltip .lnf-tip strong {
+  font-weight: 700;
+}
+.leaflet-tooltip.lnf-tooltip .lnf-tip small {
+  color: var(--color-text2);
+}

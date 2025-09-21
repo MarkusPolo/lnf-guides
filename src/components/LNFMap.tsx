@@ -1,10 +1,10 @@
 // src/components/LNFMap.tsx
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import type { MapConfig, MapMarker, MediaItem } from "../data/lnf-map.schema";
+import type { MapConfig, MapMarker, MediaItem, MapLayer } from "../data/lnf-map.schema";
 
 type Props = { config: MapConfig };
 
-// CSS for Leaflet injected once on client
+// Leaflet CSS only in browser
 function ensureLeafletCss() {
   if (typeof document === "undefined") return;
   const ID = "leaflet-css";
@@ -29,18 +29,36 @@ function escapeHtml(s: string) {
 
 function secondsFromTimecode(tc?: string) {
   if (!tc) return 0;
-  const m = tc.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-  if (!m) return 0;
-  const h = parseInt(m[3] ? m[1] : "0", 10);
-  const mm = parseInt(m[3] ? m[2] : m[1], 10);
-  const ss = parseInt(m[3] ? m[3] : m[2], 10);
-  return h * 3600 + mm * 60 + ss;
+  const parts = tc.split(":").map((x) => parseInt(x, 10));
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return 0;
 }
+
+// marker color per category (stroke/fill)
+const COLOR_BY_CAT: Record<string, { color: string; fill: string }> = {
+  biome: { color: "#2DD4BF", fill: "#2DD4BF" },       // teal
+  structure: { color: "#F59E0B", fill: "#F59E0B" },   // amber
+  settlement: { color: "#F59E0B", fill: "#F59E0B" },  // amber
+  creature: { color: "#A78BFA", fill: "#A78BFA" },    // violet
+  "point-of-interest": { color: "#60A5FA", fill: "#60A5FA" }, // blue
+};
 
 export default function LNFMap({ config }: Props) {
   const mapEl = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
-  const groupRefs = useRef<Record<string, any>>({});
+  const Lref = useRef<any>(null);
+
+  // UI state
+  const [enabledLayers, setEnabledLayers] = useState<Record<string, boolean>>(() => {
+    const obj: Record<string, boolean> = {};
+    config.layers.forEach((l) => (obj[l.id] = !!l.visibleByDefault));
+    return obj;
+  });
+  const [minConfidence, setMinConfidence] = useState<0.2 | 0.4 | 0.6 | 0.8 | 1.0>(0.2);
+  const [tagQuery, setTagQuery] = useState<string>("");
+
+  // Lightbox
   const [activeMarker, setActiveMarker] = useState<MapMarker | null>(null);
   const [activeIndex, setActiveIndex] = useState<number>(0);
 
@@ -49,38 +67,118 @@ export default function LNFMap({ config }: Props) {
     [config.base.size]
   );
 
-  // Close lightbox
-  const closeLightbox = useCallback(() => {
-    setActiveMarker(null);
-    setActiveIndex(0);
-  }, []);
+  // Prepare filters
+  const tagTokens = useMemo(() => {
+    return tagQuery
+      .toLowerCase()
+      .split(/[,\s]+/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+  }, [tagQuery]);
 
-  // Keyboard controls for lightbox
-  useEffect(() => {
-    if (!activeMarker) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeLightbox();
-      if (!activeMarker.media || activeMarker.media.length === 0) return;
-      if (e.key === "ArrowRight") setActiveIndex((i) => (i + 1) % activeMarker.media!.length);
-      if (e.key === "ArrowLeft") setActiveIndex((i) => (i - 1 + activeMarker.media!.length) % activeMarker.media!.length);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [activeMarker, closeLightbox]);
+  const layerGroupsRef = useRef<Record<string, any>>({});
 
+  const applyFilters = useCallback(
+    (layer: MapLayer, L: any) => {
+      const lg = layerGroupsRef.current[layer.id];
+      if (!lg) return;
+
+      // Clear old children
+      lg.clearLayers();
+
+      const ytid = config.video?.youtubeId;
+
+      layer.markers.forEach((m) => {
+        if (m.confidence < minConfidence) return;
+
+        // tag filter: match if every token present in tags OR in title
+        const title = (m.title || "").toLowerCase();
+        const tags = (m.tags || []).map((t) => t.toLowerCase());
+        const tagOk =
+          tagTokens.length === 0 ||
+          tagTokens.every((tok) => title.includes(tok) || tags.includes(tok));
+
+        if (!tagOk) return;
+
+        const latlng = [m.position[1], m.position[0]];
+
+        const col = COLOR_BY_CAT[m.category] || COLOR_BY_CAT["point-of-interest"];
+        const radius = 4 + Math.round(m.confidence * 6); // 5..10
+
+        const marker = L.circleMarker(latlng, {
+          radius,
+          weight: 2,
+          color: col.color,
+          fillColor: col.fill,
+          fillOpacity: 0.6,
+          // a11y: marker ist fokussierbar
+          keyboard: true,
+        });
+
+        // --- TOOLTIP (on hover) ---
+        // Kompakt: Titel, Kategorie/Confidence, optional Mini-Thumb
+        const mini =
+          m.thumbUrl
+            ? `<img src="${escapeHtml(m.thumbUrl)}" alt="" width="80" height="48" style="width:80px;height:auto;border-radius:6px;display:block;margin:6px 0 0"/>`
+            : "";
+
+        const tooltipHtml = `
+          <div class="lnf-tip">
+            <strong>${escapeHtml(m.title)}</strong><br/>
+            <small>${escapeHtml(m.category)} · ${m.confidence.toFixed(1)}</small>
+            ${mini}
+          </div>
+        `;
+        marker.bindTooltip(tooltipHtml, {
+          direction: "top",
+          className: "lnf-tooltip",
+          opacity: 1,
+          sticky: true, // folgt dem Cursor leicht
+        });
+
+        // --- CLICK => Lightbox ---
+        marker.on("click", () => {
+          if (m.media?.length) {
+            setActiveMarker(m);
+            setActiveIndex(0);
+          } else {
+            // Keine Media? Falls doch ein Timestamp-Link vorhanden wäre, könnte man hier deeplinken:
+            const first = m.media?.[0];
+            const t = first?.timecode ? secondsFromTimecode(first.timecode) : 0;
+            if (ytid && t > 0) {
+              window.open(`https://www.youtube.com/watch?v=${ytid}&t=${t}s`, "_blank", "noopener");
+            }
+          }
+        });
+
+        // Enter/Space öffnet Lightbox (Keyboard)
+        marker.on("keypress", (e: any) => {
+          if (e.originalEvent?.key === "Enter" || e.originalEvent?.key === " ") {
+            setActiveMarker(m);
+            setActiveIndex(0);
+          }
+        });
+
+        marker.addTo(lg);
+      });
+    },
+    [minConfidence, tagTokens, config.video?.youtubeId]
+  );
+
+  // init map
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!mapEl.current || mapRef.current) return;
 
     ensureLeafletCss();
 
-    let L: any;
     let destroyed = false;
 
     (async () => {
       const mod = await import("leaflet");
       if (destroyed) return;
-      L = mod.default || mod;
+      const L = mod.default || mod;
+      Lref.current = L;
 
       const map = L.map(mapEl.current!, {
         crs: L.CRS.Simple,
@@ -94,42 +192,13 @@ export default function LNFMap({ config }: Props) {
       map.fitBounds(bounds);
       mapRef.current = map;
 
-      // Build layers
+      // create layer groups
       config.layers.forEach((layer) => {
         const lg = L.layerGroup();
-        groupRefs.current[layer.id] = lg;
-
-        layer.markers.forEach((m) => {
-          const latlng = [m.position[1], m.position[0]];
-          const marker = L.circleMarker(latlng, { radius: 6, weight: 1 });
-
-          const popupHtml = `
-            <div style="max-width:260px">
-              <strong>${escapeHtml(m.title)}</strong><br/>
-              <small>${escapeHtml(m.category)} · Confidence: ${m.confidence.toFixed(1)}</small><br/>
-              ${m.notes ? `<div style="margin-top:6px">${escapeHtml(m.notes)}</div>` : ""}
-              ${
-                m.sources?.length
-                  ? `<div style="margin-top:6px"><small>Sources: ${m.sources
-                      .map((s) => escapeHtml(s.ref))
-                      .join(", ")}</small></div>`
-                  : ""
-              }
-              ${m.media?.length ? `<div style="margin-top:6px"><em>Click marker for gallery…</em></div>` : ""}
-            </div>
-          `;
-          marker.bindPopup(popupHtml, { maxWidth: 280 });
-
-          // Lightbox on click
-          marker.on("click", () => {
-            setActiveMarker(m);
-            setActiveIndex(0);
-          });
-
-          marker.addTo(lg);
-        });
-
-        if (layer.visibleByDefault) lg.addTo(map);
+        layerGroupsRef.current[layer.id] = lg;
+        if (enabledLayers[layer.id]) lg.addTo(map);
+        // initial fill with filters
+        applyFilters(layer, L);
       });
     })();
 
@@ -139,16 +208,105 @@ export default function LNFMap({ config }: Props) {
         if (mapRef.current) mapRef.current.remove();
       } catch {}
       mapRef.current = null;
-      groupRefs.current = {};
+      layerGroupsRef.current = {};
+      Lref.current = null;
     };
-  }, [bounds, config]);
+  }, []); // eslint-disable-line
 
-  // Lightbox UI
+  // re-apply filters when minConfidence/tagQuery change
+  useEffect(() => {
+    const L = Lref.current;
+    if (!L) return;
+    config.layers.forEach((layer) => applyFilters(layer, L));
+  }, [minConfidence, tagTokens, config.layers, applyFilters]);
+
+  // toggle layers on/off
+  const toggleLayer = (id: string, on: boolean) => {
+    setEnabledLayers((prev) => ({ ...prev, [id]: on }));
+    const map = mapRef.current;
+    const lg = layerGroupsRef.current[id];
+    if (!map || !lg) return;
+    if (on) lg.addTo(map);
+    else map.removeLayer(lg);
+  };
+
+  // Lightbox helpers
+  const closeLightbox = useCallback(() => {
+    setActiveMarker(null);
+    setActiveIndex(0);
+  }, []);
+
+  useEffect(() => {
+    if (!activeMarker) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeLightbox();
+      if (!activeMarker.media || activeMarker.media.length === 0) return;
+      if (e.key === "ArrowRight") setActiveIndex((i) => (i + 1) % activeMarker.media!.length);
+      if (e.key === "ArrowLeft") setActiveIndex((i) => (i - 1 + activeMarker.media!.length) % activeMarker.media!.length);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activeMarker, closeLightbox]);
+
   const media = activeMarker?.media ?? [];
   const current: MediaItem | undefined = media[activeIndex];
+  const ytid = config.video?.youtubeId;
+  const tsHref =
+    ytid && current?.timecode
+      ? `https://www.youtube.com/watch?v=${ytid}&t=${secondsFromTimecode(current.timecode)}s`
+      : undefined;
 
   return (
     <div>
+      {/* Controls */}
+      <div className="mb-3 grid gap-3 md:grid-cols-3">
+        <div className="card p-3">
+          <div className="text-sm font-semibold mb-2">Layers</div>
+          <div className="flex flex-wrap gap-3">
+            {config.layers.map((l) => (
+              <label key={l.id} className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={!!enabledLayers[l.id]}
+                  onChange={(e) => toggleLayer(l.id, e.currentTarget.checked)}
+                />
+                <span>{l.title}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-3">
+          <div className="text-sm font-semibold mb-2">Minimum confidence</div>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={0.2}
+              max={1.0}
+              step={0.2}
+              value={minConfidence}
+              onChange={(e) => setMinConfidence(Number(e.currentTarget.value) as any)}
+              className="w-full"
+            />
+            <div className="w-14 text-right text-sm">{minConfidence.toFixed(1)}</div>
+          </div>
+        </div>
+
+        <div className="card p-3">
+          <div className="text-sm font-semibold mb-2">Tag search</div>
+          <input
+            type="text"
+            placeholder="e.g. snow, dead-trees"
+            value={tagQuery}
+            onChange={(e) => setTagQuery(e.currentTarget.value)}
+            className="w-full rounded px-3 py-2 bg-bg border border-border"
+            aria-label="Filter markers by tags"
+          />
+          <p className="text-xs text-text2 mt-2">Use commas or spaces. Matches tags or title.</p>
+        </div>
+      </div>
+
+      {/* Map canvas */}
       <div
         ref={mapEl}
         style={{
@@ -160,6 +318,7 @@ export default function LNFMap({ config }: Props) {
           border: "1px solid color-mix(in oklab, var(--color-border), transparent 50%)",
         }}
       />
+
       {config.base.attributionHtml && (
         <p
           className="text-xs text-text2 mt-2"
@@ -167,19 +326,17 @@ export default function LNFMap({ config }: Props) {
         />
       )}
 
-      {/* Lightbox overlay */}
+      {/* Lightbox */}
       {activeMarker && (
         <div
           className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
           onClick={(e) => {
-            // click on backdrop closes
             if (e.target === e.currentTarget) closeLightbox();
           }}
         >
           <div className="w-full max-w-5xl bg-surface border border-border rounded-2xl shadow-soft overflow-hidden">
-            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <div className="min-w-0">
                 <h3 className="text-lg font-semibold truncate">{activeMarker.title}</h3>
@@ -187,19 +344,12 @@ export default function LNFMap({ config }: Props) {
                   {activeMarker.category} · Confidence {activeMarker.confidence.toFixed(1)}
                 </p>
               </div>
-              <button
-                className="btn btn-outline"
-                onClick={closeLightbox}
-                aria-label="Close gallery"
-                type="button"
-              >
+              <button className="btn btn-outline" onClick={closeLightbox} type="button" aria-label="Close gallery">
                 Close
               </button>
             </div>
 
-            {/* Content */}
             <div className="grid gap-4 md:grid-cols-[1fr,240px] p-4">
-              {/* Main image / carousel */}
               <div className="relative">
                 {current ? (
                   <div className="relative">
@@ -209,24 +359,21 @@ export default function LNFMap({ config }: Props) {
                       className="w-full h-auto rounded-lg"
                       loading="eager"
                     />
-                    {/* Prev/Next */}
                     {media.length > 1 && (
                       <>
                         <button
                           className="absolute left-2 top-1/2 -translate-y-1/2 btn btn-outline"
-                          onClick={() =>
-                            setActiveIndex((i) => (i - 1 + media.length) % media.length)
-                          }
-                          aria-label="Previous image"
+                          onClick={() => setActiveIndex((i) => (i - 1 + media.length) % media.length)}
                           type="button"
+                          aria-label="Previous image"
                         >
                           ◀
                         </button>
                         <button
                           className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-outline"
                           onClick={() => setActiveIndex((i) => (i + 1) % media.length)}
-                          aria-label="Next image"
                           type="button"
+                          aria-label="Next image"
                         >
                           ▶
                         </button>
@@ -239,18 +386,16 @@ export default function LNFMap({ config }: Props) {
                   </div>
                 )}
 
-                {/* Caption + timestamp link */}
                 {current && (
                   <div className="mt-3 text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-text">{current.caption || ""}</p>
-                      {current.timecode && (
+                      {ytid && current.timecode && (
                         <a
                           className="btn btn-outline"
-                          href={`https://www.youtube.com/watch?v=jKQem4Z6ioQ&t=${secondsFromTimecode(current.timecode)}s`}
+                          href={`https://www.youtube.com/watch?v=${ytid}&t=${secondsFromTimecode(current.timecode)}s`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          aria-label="Open timestamp on YouTube"
                         >
                           Open at {current.timecode}
                         </a>
@@ -263,7 +408,6 @@ export default function LNFMap({ config }: Props) {
                 )}
               </div>
 
-              {/* Thumbnails / details */}
               <aside>
                 {media.length > 0 ? (
                   <div className="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -275,7 +419,7 @@ export default function LNFMap({ config }: Props) {
                         type="button"
                         aria-label={`Open image ${idx + 1}`}
                       >
-                        <img src={m.thumbUrl} alt={m.caption ?? ""} className="w-full h-auto" />
+                        <img src={m.thumbUrl} alt={m.caption ?? ""} className="w-full h-auto" loading="lazy" />
                         {m.timecode && (
                           <span className="absolute bottom-1 right-1 text-[11px] bg-bg/70 px-1 rounded">
                             {m.timecode}
