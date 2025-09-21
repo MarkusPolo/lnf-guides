@@ -6,26 +6,20 @@ interface Props {
   aspect?: string;      // CSS aspect-ratio, default "16/9"
 }
 
-// YouTube-ID aus diversen URL-Formaten extrahieren
 function parseYouTubeId(u: string): string | null {
   try {
     if (!u) return null;
-    const Y = new URL(u, "https://x.invalid"); // fallback base
+    const Y = new URL(u, "https://x.invalid");
     const host = Y.hostname.replace(/^www\./, "");
-    // youtu.be/<id>
     if (host === "youtu.be") return Y.pathname.slice(1) || null;
-    // .../watch?v=<id>
     const v = Y.searchParams.get("v");
     if (v) return v;
-    // .../embed/<id>
     const m1 = Y.pathname.match(/\/embed\/([A-Za-z0-9_-]{6,})/);
     if (m1) return m1[1];
-    // .../shorts/<id>
     const m2 = Y.pathname.match(/\/shorts\/([A-Za-z0-9_-]{6,})/);
     if (m2) return m2[1];
     return null;
   } catch {
-    // evtl. wurde direkt eine ID geliefert
     if (/^[A-Za-z0-9_-]{6,}$/.test(u)) return u;
     return null;
   }
@@ -53,8 +47,8 @@ const src = videoId ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0` 
         </p>
         <div class="flex items-center justify-center gap-3">
           <button class="btn btn-outline" data-yt-play>Play video</button>
-          <!-- Erteilt explizit Consent für External -->
-          <button class="btn btn-primary" data-yt-allow>Always allow embeds</button>
+          <!-- Öffnet die CMP-UI, damit Nutzer Embeds erlauben kann -->
+          <button class="btn btn-primary" data-privacy-open>Always allow embeds</button>
         </div>
         <div class="mt-2">
           <button class="underline hover:text-text text-xs" data-privacy-open>Manage privacy settings</button>
@@ -68,7 +62,7 @@ const src = videoId ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0` 
   </p>
 </div>
 
-<script>
+<script is:inline>
   (function () {
     const root =
       document.currentScript?.previousElementSibling?.closest('[data-yt-id]') ||
@@ -79,52 +73,13 @@ const src = videoId ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0` 
     const ytSrc     = root.getAttribute('data-yt-src') || '';
     const ph        = root.querySelector('[data-yt-ph]');
     const btnPlay   = root.querySelector('[data-yt-play]');
-    const btnAllow  = root.querySelector('[data-yt-allow]');
     const frameHost = root.querySelector('.relative.w-full');
 
-    // ---- Consent-Utils (wie in Comments: LS-Fallback + beide Keys) ----
-    const LS_KEYS = ['lnf-consent-v1', 'lnf-consent', 'lnf-consent-1'];
-
-    function readLS() {
-      for (const k of LS_KEYS) {
-        try {
-          const raw = localStorage.getItem(k);
-          if (raw) return JSON.parse(raw);
-        } catch {}
-      }
-      return null;
-    }
-    function getDecisions() {
-      try {
-        const viaApi = window.consent?.get?.();
-        if (viaApi && typeof viaApi === 'object') {
-          if ('external' in viaApi || 'analytics' in viaApi || 'ads' in viaApi) return viaApi;
-          if ('decisions' in viaApi) return viaApi.decisions;
-        }
-      } catch {}
-      const rec = readLS();
-      if (rec?.decisions) return rec.decisions;
-      return { analytics: false, external: false, ads: false };
-    }
     function hasExternalConsent() {
-      return !!getDecisions().external;
-    }
-    function setExternalTrueNow() {
       try {
-        if (window.consent?.set) {
-          window.consent.set({ external: true });
-          return;
-        }
-      } catch {}
-      // Fallback: direkt LS schreiben + Event feuern
-      try {
-        const base =
-          readLS() || { version: 1, policyVersion: 1, ts: 0, decisions: { analytics: false, external: false, ads: false } };
-        base.decisions.external = true;
-        base.ts = Date.now();
-        localStorage.setItem('lnf-consent-v1', JSON.stringify(base));
-        window.dispatchEvent(new CustomEvent('consent:changed', { detail: base }));
-      } catch {}
+        // @ts-ignore
+        return !!(window.lnfConsent && window.lnfConsent.allowed && window.lnfConsent.allowed('external'));
+      } catch { return false; }
     }
 
     function mountIframe() {
@@ -143,40 +98,22 @@ const src = videoId ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0` 
       ph?.remove();
     }
 
-    function decisionsFrom(detail) {
-      if (!detail) return null;
-      if (detail.external !== undefined || detail.analytics !== undefined) return detail;
-      if (detail.decisions) return detail.decisions;
-      return null;
-    }
-
-    // Initial: wenn bereits erlaubt (per LS/consent), sofort laden
+    // Initial
     if (hasExternalConsent()) mountIframe();
 
-    // Auf spätere Änderungen reagieren (beide Events)
+    // Auf Consent-Änderungen reagieren
     const onChange = (e) => {
-      const d = decisionsFrom(e?.detail);
+      const d = e?.detail;
       if (d && d.external) mountIframe();
     };
-    window.addEventListener('consent:changed', onChange);
-    window.addEventListener('consent:updated', onChange);
+    window.addEventListener('consent:changed', onChange, { passive: true });
+    window.addEventListener('consent:updated', onChange, { passive: true });
 
-    // Buttons
+    // „Play video“: Bei vorhandener Einwilligung sofort laden, sonst CMP öffnen
     btnPlay?.addEventListener('click', (ev) => {
       ev.preventDefault();
       if (hasExternalConsent()) mountIframe();
-      else {
-        // Öffnen übernimmt globales [data-privacy-open]-Delegation in ConsentBanner
-        const open = document.querySelector('[data-privacy-open]');
-        if (window?.consentUI?.open) window.consentUI.open('settings');
-        else if (open) (open as HTMLElement).click();
-      }
-    });
-
-    btnAllow?.addEventListener('click', (ev) => {
-      ev.preventDefault();
-      setExternalTrueNow();
-      mountIframe();
+      else if (typeof window.openPrivacy === 'function') window.openPrivacy();
     });
   })();
 </script>

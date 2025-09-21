@@ -40,45 +40,20 @@ const cfg = { repo, repoId, category, categoryId, mapping, lang, theme };
 <script define:vars={{ hostId, cfg }}>
   // @ts-nocheck
   (function () {
-    const LS_KEYS = ["lnf-consent-1", "lnf-consent-v1", "lnf-consent"]; // inkl. neuer Key
     let mounted = false;
 
-    function readLS() {
-      for (const k of LS_KEYS) {
-        try {
-          const raw = localStorage.getItem(k);
-          if (raw) return JSON.parse(raw);
-        } catch {}
-      }
-      return null;
-    }
-
-    // Liefert immer die Decisions-Form { analytics, external, ads }
-    function getDecisions() {
-      try {
-        const viaApi = window.consent?.get?.();
-        if (viaApi && typeof viaApi === "object") {
-          // Kann entweder direkt die Decisions sein ODER ein Record
-          if ("external" in viaApi || "analytics" in viaApi || "ads" in viaApi) return viaApi;
-          if ("decisions" in viaApi) return viaApi.decisions;
-        }
-      } catch {}
-      const rec = readLS();
-      if (rec?.decisions) return rec.decisions;
-      return { analytics: false, external: false, ads: false };
-    }
-
     function allowExternal() {
-      return !!getDecisions().external;
+      try {
+        // @ts-ignore
+        return !!(window.lnfConsent && window.lnfConsent.allowed && window.lnfConsent.allowed('external'));
+      } catch { return false; }
     }
 
     function mountGiscus() {
       const host = document.getElementById(hostId);
       if (!host) return;
-      // Schon vorhanden?
       if (host.querySelector("iframe.giscus-frame") || document.getElementById("giscus-script")) {
-        mounted = true;
-        return;
+        mounted = true; return;
       }
       const s = document.createElement("script");
       s.src = "https://giscus.app/client.js";
@@ -115,19 +90,21 @@ const cfg = { repo, repoId, category, categoryId, mapping, lang, theme };
       else unmountGiscus();
     }
 
-    // Auf beide Event-Varianten reagieren (detail kann Decisions ODER Record sein)
     function onConsentEvent(e) {
       const d = e?.detail;
-      const decisions = d && (d.external !== undefined ? d : d.decisions);
-      if (decisions && decisions.external === true) {
-        mountGiscus();
+      if (d && typeof d.external === 'boolean') {
+        if (d.external) mountGiscus(); else unmountGiscus();
       } else {
-        unmountGiscus();
+        apply();
       }
     }
 
-    document.addEventListener("DOMContentLoaded", apply);
-    window.addEventListener("consent:changed", onConsentEvent);
-    window.addEventListener("consent:updated", onConsentEvent);
+    if (document.readyState === 'loading') {
+      document.addEventListener("DOMContentLoaded", apply, { once:true });
+    } else {
+      apply();
+    }
+    window.addEventListener("consent:changed", onConsentEvent, { passive: true });
+    window.addEventListener("consent:updated", onConsentEvent, { passive: true });
   })();
 </script>

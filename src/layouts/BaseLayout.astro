@@ -279,98 +279,115 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
     </script>
 
     <!-- TCF Bridge: einzige Consent-Quelle & CMP-UI -->
-    <script>
-      (function(){
-        var state = { analytics:false, ads:false, adsPersonalized:false, external:false };
+<script>
+  (function(){
+    var state = { analytics:false, ads:false, adsPersonalized:false, external:false };
+    var subscribed = false;
+    var triedInitial = false;
 
-        function deriveBooleans(tc){
-          var p = (tc && tc.purpose) || {};
-          var cons = p.consents || {};
-          var li   = p.legitimateInterests || {};
-          var analyticsAllowed = !!(cons['7'] || li['7']);   // Purpose 7: Ad performance measurement
-          var adsAllowed       = !!cons['2'];                // Purpose 2: Basic Ads
-          var personalized     = !!(cons['3'] && cons['4']); // Profil + Auswahl
-          var externalAllowed  = !!(cons['1']);              // Purpose 1: Store/Access
-          return {
-            analytics: analyticsAllowed,
-            ads: adsAllowed,
-            adsPersonalized: adsAllowed && personalized,
-            external: externalAllowed
-          };
-        }
+    function deriveBooleans(tc){
+      var p = (tc && tc.purpose) || {};
+      var cons = p.consents || {};
+      var li   = p.legitimateInterests || {};
+      var analyticsAllowed = !!(cons['7'] || li['7']);   // Purpose 7: Ad performance measurement
+      var adsAllowed       = !!cons['2'];                // Purpose 2: Basic Ads
+      var personalized     = !!(cons['3'] && cons['4']); // Profil + Auswahl
+      var externalAllowed  = !!(cons['1']);              // Purpose 1: Store/Access
+      return {
+        analytics: analyticsAllowed,
+        ads: adsAllowed,
+        adsPersonalized: adsAllowed && personalized,
+        external: externalAllowed
+      };
+    }
 
-        function pushGtagConsent(s){
-          try {
-            gtag('consent','update', {
-              analytics_storage:   s.analytics ? 'granted' : 'denied',
-              ad_storage:          s.ads ? 'granted' : 'denied',
-              ad_user_data:        s.adsPersonalized ? 'granted' : 'denied',
-              ad_personalization:  s.adsPersonalized ? 'granted' : 'denied'
-            });
-            try { window.__lnf_onGtag && window.__lnf_onGtag(['consent','update', {
-              analytics_storage:   s.analytics ? 'granted' : 'denied',
-              ad_storage:          s.ads ? 'granted' : 'denied',
-              ad_user_data:        s.adsPersonalized ? 'granted' : 'denied',
-              ad_personalization:  s.adsPersonalized ? 'granted' : 'denied'
-            }]); } catch(e){}
-          } catch(e){}
-          try {
-            window.dispatchEvent(new CustomEvent('consent:changed', { detail: s }));
-            window.dispatchEvent(new Event('consent:updated'));
-          } catch(e){}
-        }
-
-        function subscribeTCF(){
-          if (typeof __tcfapi !== 'function') return false;
-          __tcfapi('addEventListener', 2, function(tcData, success){
-            if (!success || !tcData || !tcData.tcString) return;
-            var next = deriveBooleans(tcData);
-            var changed = next.analytics !== state.analytics ||
-                          next.ads !== state.ads ||
-                          next.adsPersonalized !== state.adsPersonalized ||
-                          next.external !== state.external;
-            state = next;
-            if (changed) pushGtagConsent(state);
-          });
-          return true;
-        }
-
-        var got = subscribeTCF();
-        if (!got) {
-          document.addEventListener('DOMContentLoaded', function(){ subscribeTCF(); }, { once:true });
-        }
-
-        window.lnfConsent = {
-          get: function(){ return { ...state }; },
-          allowed: function(key){ return !!state[key]; },
-          on: function(fn){
-            if (typeof fn !== 'function') return;
-            window.addEventListener('consent:changed', function(ev){ fn(ev.detail || { ...state }); });
-          }
-        };
-
-        function openCMP(){
-          try { if (typeof __tcfapi === 'function') { __tcfapi('displayConsentUi', 2, function(){}); return; } } catch(e){}
-          try {
-            window.googlefc = window.googlefc || {};
-            window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
-            window.googlefc.callbackQueue.push(function(){
-              if (typeof googlefc.showRevocationMessage === 'function') {
-                googlefc.showRevocationMessage();
-              }
-            });
-          } catch(e){}
-        }
-        window.openPrivacy = openCMP;
-
-        document.addEventListener('click', function(ev){
-          var t = ev.target && ev.target.closest && ev.target.closest('[data-privacy-open]');
-          if (!t) return;
-          ev.preventDefault();
-          openCMP();
+    function pushGtagConsent(s){
+      try {
+        gtag('consent','update', {
+          analytics_storage:   s.analytics ? 'granted' : 'denied',
+          ad_storage:          s.ads ? 'granted' : 'denied',
+          ad_user_data:        s.adsPersonalized ? 'granted' : 'denied',
+          ad_personalization:  s.adsPersonalized ? 'granted' : 'denied'
         });
-      })();
-    </script>
+        try { window.__lnf_onGtag && window.__lnf_onGtag(['consent','update', {
+          analytics_storage:   s.analytics ? 'granted' : 'denied',
+          ad_storage:          s.ads ? 'granted' : 'denied',
+          ad_user_data:        s.adsPersonalized ? 'granted' : 'denied',
+          ad_personalization:  s.adsPersonalized ? 'granted' : 'denied'
+        }]); } catch(e){}
+      } catch(e){}
+      try {
+        window.dispatchEvent(new CustomEvent('consent:changed', { detail: s }));
+        window.dispatchEvent(new Event('consent:updated'));
+      } catch(e){}
+    }
+
+    function handleTC(tcData, success){
+      if (!success || !tcData || !tcData.tcString) return;
+      var next = deriveBooleans(tcData);
+      var changed = next.analytics !== state.analytics ||
+                    next.ads !== state.ads ||
+                    next.adsPersonalized !== state.adsPersonalized ||
+                    next.external !== state.external;
+      state = next;
+      if (changed) pushGtagConsent(state);
+    }
+
+    function subscribeTCF(){
+      if (typeof __tcfapi !== 'function') return false;
+      // Event-Stream
+      try {
+        __tcfapi('addEventListener', 2, handleTC);
+        subscribed = true;
+      } catch(e) {}
+      // Initialer Snapshot (falls kein sofortiges Event kommt)
+      try {
+        __tcfapi('getTCData', 2, handleTC);
+        triedInitial = true;
+      } catch(e) {}
+      return subscribed;
+    }
+
+    // wiederholt versuchen, bis CMP bereit ist (max ~5s)
+    var attempts = 0;
+    var iv = setInterval(function(){
+      attempts++;
+      if (subscribeTCF() || attempts > 25) clearInterval(iv);
+    }, 200);
+    // einmal bei DOM ready auch nochmal probieren
+    document.addEventListener('DOMContentLoaded', function(){ if (!subscribed) subscribeTCF(); }, { once:true });
+
+    window.lnfConsent = {
+      get: function(){ return { ...state }; },
+      allowed: function(key){ return !!state[key]; },
+      on: function(fn){
+        if (typeof fn !== 'function') return;
+        window.addEventListener('consent:changed', function(ev){ fn(ev.detail || { ...state }); });
+      }
+    };
+
+    function openCMP(){
+      try { if (typeof __tcfapi === 'function') { __tcfapi('displayConsentUi', 2, function(){}); return; } } catch(e){}
+      try {
+        window.googlefc = window.googlefc || {};
+        window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
+        window.googlefc.callbackQueue.push(function(){
+          if (typeof googlefc.showRevocationMessage === 'function') {
+            googlefc.showRevocationMessage();
+          }
+        });
+      } catch(e){}
+    }
+    window.openPrivacy = openCMP;
+
+    document.addEventListener('click', function(ev){
+      var t = ev.target && ev.target.closest && ev.target.closest('[data-privacy-open]');
+      if (!t) return;
+      ev.preventDefault();
+      openCMP();
+    });
+  })();
+</script>
 
     <!-- AdSense: IMMER laden (PA/NPA/LTD via Consent Mode/TCF) – keine preconnects vor Consent -->
     <script

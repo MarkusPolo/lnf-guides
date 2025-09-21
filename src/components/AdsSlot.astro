@@ -61,8 +61,6 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
   const adSlot     = root.getAttribute('data-ad-slot') || '';
   const height     = Number(root.getAttribute('data-height') || '250');
 
-  const LS_KEYS = ['lnf-consent-1','lnf-consent-v1','lnf-consent'];
-
   function setState(s){ root.setAttribute('data-state', s); }
   function clear(el){ while (el.firstChild) el.removeChild(el.firstChild); }
 
@@ -88,13 +86,6 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
     root.appendChild(box);
   }
 
-  function readConsentLS(){
-    for (const k of LS_KEYS){
-      try{ const raw = localStorage.getItem(k); if (raw){ const p = JSON.parse(raw); const d=p?.decisions||{}; return { ads:!!d.ads, adsPersonalized:!!d.adsPersonalized }; } }catch{}
-    }
-    return { ads:false, adsPersonalized:false };
-  }
-
   function ensureAdSenseScript(client){
     const id = 'adsbygoogle-js';
     if (document.getElementById(id)) return true;
@@ -113,9 +104,7 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
   function alreadyMounted(){
     const ins = root.querySelector('ins.adsbygoogle');
     if (!ins) return false;
-    // AdSense setzt data-ad-status = 'unfilled' | 'filled' → wenn vorhanden, NICHT erneut pushen
     if (ins.getAttribute('data-ad-status')) return true;
-    // eigenes Flag als Fallback
     if (ins.getAttribute('data-adsbygoogle-pushed') === 'true') return true;
     return false;
   }
@@ -152,7 +141,6 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
         (window.adsbygoogle = window.adsbygoogle || []).push({});
         ins.setAttribute('data-adsbygoogle-pushed','true');
         setState('allowed-requested');
-        // kurze Renderprüfung:
         setTimeout(() => {
           const hasIframe = !!ins.querySelector('iframe');
           const h = ins.offsetHeight;
@@ -169,13 +157,21 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
     }
   }
 
+  function readConsent(){
+    try {
+      // @ts-ignore
+      const s = window.lnfConsent && typeof window.lnfConsent.get === 'function' ? window.lnfConsent.get() : null;
+      return s || { analytics:false, ads:false, adsPersonalized:false, external:false };
+    } catch { return { analytics:false, ads:false, adsPersonalized:false, external:false }; }
+  }
+
   function apply(){
     if (provider !== 'adsense'){
       setState('provider-house');
-      renderInfo(false, 'Provider is \"house\" (no ad requested).', false);
+      renderInfo(false, 'Provider is "house" (no ad requested).', false);
       return;
     }
-    const consent = readConsentLS();
+    const consent = readConsent();
     if (consent.ads){
       mountAdSenseAndReport(consent);
     } else {
@@ -185,8 +181,7 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
   }
 
   apply();
-  window.addEventListener('consent:updated', apply);
-  window.addEventListener('consent:changed', apply);
+  window.addEventListener('consent:changed', apply, { passive: true });
+  window.addEventListener('consent:updated', apply, { passive: true });
 })();
 </script>
-
