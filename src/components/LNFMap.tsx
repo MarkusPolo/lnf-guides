@@ -1,10 +1,10 @@
 // src/components/LNFMap.tsx
-import { useEffect, useMemo, useRef } from "react";
-import type { MapConfig } from "../data/lnf-map.schema";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import type { MapConfig, MapMarker, MediaItem } from "../data/lnf-map.schema";
 
 type Props = { config: MapConfig };
 
-// kleine Hilfsfunktion für CSS-Lade-Injektion (einmalig)
+// CSS for Leaflet injected once on client
 function ensureLeafletCss() {
   if (typeof document === "undefined") return;
   const ID = "leaflet-css";
@@ -18,7 +18,6 @@ function ensureLeafletCss() {
   document.head.appendChild(link);
 }
 
-// simpel escaper fürs Popup
 function escapeHtml(s: string) {
   return s
     .replaceAll("&", "&amp;")
@@ -28,31 +27,58 @@ function escapeHtml(s: string) {
     .replaceAll("'", "&#039;");
 }
 
+function secondsFromTimecode(tc?: string) {
+  if (!tc) return 0;
+  const m = tc.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return 0;
+  const h = parseInt(m[3] ? m[1] : "0", 10);
+  const mm = parseInt(m[3] ? m[2] : m[1], 10);
+  const ss = parseInt(m[3] ? m[3] : m[2], 10);
+  return h * 3600 + mm * 60 + ss;
+}
+
 export default function LNFMap({ config }: Props) {
   const mapEl = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const groupRefs = useRef<Record<string, any>>({});
+  const [activeMarker, setActiveMarker] = useState<MapMarker | null>(null);
+  const [activeIndex, setActiveIndex] = useState<number>(0);
 
-  // Bounds im Simple-CRS: [ [y0,x0], [y1,x1] ]  == [ [0,0], [height,width] ]
   const bounds = useMemo(
     () => [[0, 0], [config.base.size[1], config.base.size[0]]] as [number, number][],
     [config.base.size]
   );
 
+  // Close lightbox
+  const closeLightbox = useCallback(() => {
+    setActiveMarker(null);
+    setActiveIndex(0);
+  }, []);
+
+  // Keyboard controls for lightbox
   useEffect(() => {
-    // Nur im Browser
+    if (!activeMarker) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeLightbox();
+      if (!activeMarker.media || activeMarker.media.length === 0) return;
+      if (e.key === "ArrowRight") setActiveIndex((i) => (i + 1) % activeMarker.media!.length);
+      if (e.key === "ArrowLeft") setActiveIndex((i) => (i - 1 + activeMarker.media!.length) % activeMarker.media!.length);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activeMarker, closeLightbox]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     if (!mapEl.current || mapRef.current) return;
 
-    // CSS nachladen
     ensureLeafletCss();
 
-    // Leaflet dynamisch importieren (verhindert SSR-Import von window)
     let L: any;
     let destroyed = false;
 
     (async () => {
-      const mod = await import("leaflet"); // kein Top-Level-Import!
+      const mod = await import("leaflet");
       if (destroyed) return;
       L = mod.default || mod;
 
@@ -68,7 +94,7 @@ export default function LNFMap({ config }: Props) {
       map.fitBounds(bounds);
       mapRef.current = map;
 
-      // Layer + Marker
+      // Build layers
       config.layers.forEach((layer) => {
         const lg = L.layerGroup();
         groupRefs.current[layer.id] = lg;
@@ -89,10 +115,17 @@ export default function LNFMap({ config }: Props) {
                       .join(", ")}</small></div>`
                   : ""
               }
+              ${m.media?.length ? `<div style="margin-top:6px"><em>Click marker for gallery…</em></div>` : ""}
             </div>
           `;
-
           marker.bindPopup(popupHtml, { maxWidth: 280 });
+
+          // Lightbox on click
+          marker.on("click", () => {
+            setActiveMarker(m);
+            setActiveIndex(0);
+          });
+
           marker.addTo(lg);
         });
 
@@ -103,14 +136,16 @@ export default function LNFMap({ config }: Props) {
     return () => {
       destroyed = true;
       try {
-        if (mapRef.current) {
-          mapRef.current.remove();
-        }
+        if (mapRef.current) mapRef.current.remove();
       } catch {}
       mapRef.current = null;
       groupRefs.current = {};
     };
   }, [bounds, config]);
+
+  // Lightbox UI
+  const media = activeMarker?.media ?? [];
+  const current: MediaItem | undefined = media[activeIndex];
 
   return (
     <div>
@@ -130,6 +165,139 @@ export default function LNFMap({ config }: Props) {
           className="text-xs text-text2 mt-2"
           dangerouslySetInnerHTML={{ __html: config.base.attributionHtml }}
         />
+      )}
+
+      {/* Lightbox overlay */}
+      {activeMarker && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            // click on backdrop closes
+            if (e.target === e.currentTarget) closeLightbox();
+          }}
+        >
+          <div className="w-full max-w-5xl bg-surface border border-border rounded-2xl shadow-soft overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold truncate">{activeMarker.title}</h3>
+                <p className="text-xs text-text2">
+                  {activeMarker.category} · Confidence {activeMarker.confidence.toFixed(1)}
+                </p>
+              </div>
+              <button
+                className="btn btn-outline"
+                onClick={closeLightbox}
+                aria-label="Close gallery"
+                type="button"
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="grid gap-4 md:grid-cols-[1fr,240px] p-4">
+              {/* Main image / carousel */}
+              <div className="relative">
+                {current ? (
+                  <div className="relative">
+                    <img
+                      src={current.fullUrl}
+                      alt={current.caption ?? activeMarker.title}
+                      className="w-full h-auto rounded-lg"
+                      loading="eager"
+                    />
+                    {/* Prev/Next */}
+                    {media.length > 1 && (
+                      <>
+                        <button
+                          className="absolute left-2 top-1/2 -translate-y-1/2 btn btn-outline"
+                          onClick={() =>
+                            setActiveIndex((i) => (i - 1 + media.length) % media.length)
+                          }
+                          aria-label="Previous image"
+                          type="button"
+                        >
+                          ◀
+                        </button>
+                        <button
+                          className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-outline"
+                          onClick={() => setActiveIndex((i) => (i + 1) % media.length)}
+                          aria-label="Next image"
+                          type="button"
+                        >
+                          ▶
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="aspect-video grid place-items-center text-text2">
+                    No media yet for this marker.
+                  </div>
+                )}
+
+                {/* Caption + timestamp link */}
+                {current && (
+                  <div className="mt-3 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-text">{current.caption || ""}</p>
+                      {current.timecode && (
+                        <a
+                          className="btn btn-outline"
+                          href={`https://www.youtube.com/watch?v=jKQem4Z6ioQ&t=${secondsFromTimecode(current.timecode)}s`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Open timestamp on YouTube"
+                        >
+                          Open at {current.timecode}
+                        </a>
+                      )}
+                    </div>
+                    <p className="text-xs text-text2 mt-1">
+                      Sources: {activeMarker.sources.map((s) => s.ref).join(", ")}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Thumbnails / details */}
+              <aside>
+                {media.length > 0 ? (
+                  <div className="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {media.map((m, idx) => (
+                      <button
+                        key={m.id}
+                        className={`relative rounded-lg overflow-hidden border ${idx === activeIndex ? "border-accent" : "border-border"}`}
+                        onClick={() => setActiveIndex(idx)}
+                        type="button"
+                        aria-label={`Open image ${idx + 1}`}
+                      >
+                        <img src={m.thumbUrl} alt={m.caption ?? ""} className="w-full h-auto" />
+                        {m.timecode && (
+                          <span className="absolute bottom-1 right-1 text-[11px] bg-bg/70 px-1 rounded">
+                            {m.timecode}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-text2">Add trailer stills here to enhance this marker.</p>
+                )}
+
+                {activeMarker.notes && (
+                  <div className="mt-4 text-sm">
+                    <h4 className="font-semibold mb-1">Notes</h4>
+                    <p className="text-text2">{activeMarker.notes}</p>
+                  </div>
+                )}
+              </aside>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

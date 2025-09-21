@@ -3,7 +3,7 @@ export type SourceType = "trailer" | "dev-comment" | "leak" | "community" | "inf
 
 export interface MapSourceRef {
   type: SourceType;
-  ref: string;        // e.g. "Trailer 00:41", URL-Slug, Kommentar
+  ref: string;        // e.g. "Trailer 00:41", URL, Kommentar
 }
 
 export type MarkerCategory =
@@ -13,17 +13,26 @@ export type MarkerCategory =
   | "structure"
   | "point-of-interest";
 
+export interface MediaItem {
+  id: string;                   // "snow-bridge-01"
+  thumbUrl: string;             // small image (e.g. 320-640px wide)
+  fullUrl: string;              // larger image (e.g. 1280-1920px wide)
+  caption?: string;             // "Snowy bridge from first trailer"
+  timecode?: string;            // "00:41"
+  source?: "trailer" | "screenshot" | "concept" | "community";
+}
+
 export interface MapMarker {
-  id: string;                       // stable ID: "snowy-peaks-bridge"
+  id: string;                       // "snowy-peaks-bridge"
   title: string;                    // "Snowy mountain + stone bridge"
   category: MarkerCategory;
-  position: [number, number];       // [x, y] in image coords (px)
+  position: [number, number];       // [x, y] in image px coords
   confidence: 0.2 | 0.4 | 0.6 | 0.8 | 1.0;
   sources: MapSourceRef[];
   notes?: string;
   tags?: string[];
-  // optional kleines Bild (Thumbnail) – z. B. aus Trailer-Standbild (Fair Use, klein!)
-  thumbUrl?: string;
+  thumbUrl?: string;                // optional primary thumb
+  media?: MediaItem[];              // ⬅️ NEW: gallery
 }
 
 export interface MapLayer {
@@ -36,13 +45,13 @@ export interface MapLayer {
 
 export interface MapBaseImage {
   imageUrl: string;                 // /images/lnf/lnf-speculative-world.png
-  size: [number, number];           // [widthPx, heightPx], e.g. [4096, 2048]
+  size: [number, number];           // [widthPx, heightPx]
   attributionHtml?: string;
 }
 
 export interface MapConfig {
   base: MapBaseImage;
   layers: MapLayer[];
-  lastUpdatedISO: string;           // for changelog/SEO
-  disclaimerHtml?: string;          // displayed under/over the map
+  lastUpdatedISO: string;
+  disclaimerHtml?: string;
 }
