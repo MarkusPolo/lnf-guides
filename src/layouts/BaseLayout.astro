@@ -1,6 +1,5 @@
 ---
 import "../styles/global.css";
-import ConsentBanner from "../components/ConsentBanner.astro";
 
 type ArticleMeta = {
   published?: string;
@@ -138,7 +137,6 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
     <!-- Styles: Haupt-CSS non-blocking via preload+swap -->
     <link rel="preload" as="style" href="/_astro/_slug_.Du0I1rql.css" onload="this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="/_astro/_slug_.Du0I1rql.css"></noscript>
-    <!-- Entfernt: leeren/0B-CSS-Chuck nicht laden -->
 
     <!-- KEINE preconnects ohne Consent!
          Wir injizieren preconnects dynamisch nach Opt-in (siehe unten). -->
@@ -205,7 +203,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
       });
     </script>
 
-    <!-- gtag-Proxy: leitet consent updates an den ConsentBanner-Hook -->
+    <!-- gtag-Proxy: beobachte consent updates -->
     <script>
       (function(){
         var _gtag = window.gtag;
@@ -223,58 +221,11 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
     <!-- Funding Choices (CMP) – darf vor Consent geladen werden -->
     <script async src={"https://fundingchoicesmessages.google.com/i/" + FC_PUBLISHER_ID + "?ers=1"}></script>
 
-    <!-- Signalisierung/TCF ohne aggressives Auto-Open -->
-    <script>
-      (function(){
-        // Mini Consent-API (liest Entscheidungen zusammen)
-        var LS_KEYS = ['lnf-consent-1','lnf-consent-v1','lnf-consent'];
-        function readAny(){
-          for (var i=0;i<LS_KEYS.length;i++){
-            try{ var raw = localStorage.getItem(LS_KEYS[i]); if (raw) return JSON.parse(raw); }catch(e){}
-          }
-          return null;
-        }
-        function getDecisions(){
-          try {
-            var via = window.consent && typeof window.consent.get==='function' ? window.consent.get() : null;
-            if (via && (via.analytics!==undefined || via.external!==undefined || via.ads!==undefined)) return {
-              analytics: !!via.analytics, external: !!via.external, ads: !!via.ads, adsPersonalized: !!via.adsPersonalized
-            };
-          } catch(e){}
-          var rec = readAny();
-          var d = rec && rec.decisions ? rec.decisions : null;
-          if (d) return { analytics: !!d.analytics, external: !!d.external, ads: !!d.ads, adsPersonalized: !!d.adsPersonalized };
-          return { analytics:false, external:false, ads:false, adsPersonalized:false };
-        }
-        var listeners = new Set();
-        function emit(){
-          var d = getDecisions();
-          listeners.forEach(function(fn){ try{ fn(d); }catch(e){} });
-          try {
-            window.dispatchEvent(new CustomEvent('consent:changed', { detail: d }));
-            window.dispatchEvent(new Event('consent:updated'));
-          } catch(e){}
-        }
-        window.lnfConsent = {
-          get: getDecisions,
-          allowed: function(key){ var d=getDecisions(); return !!d[key]; },
-          on: function(cb){ if (typeof cb==='function') listeners.add(cb); },
-          off: function(cb){ listeners.delete(cb); }
-        };
-        window.addEventListener('storage', function(ev){
-          if (!ev || !ev.key) return;
-          if (LS_KEYS.includes(ev.key)) emit();
-        });
-        emit();
-      })();
-    </script>
-
-    <!-- KEIN Auto-Open der Privacy-UIs mehr; nur auf Nutzeraktion.
-         Drittskripte & preconnects NACH Consent via Idle-Callback. -->
+    <!-- Preconnect/Loader-Helfer (nur nach Consent nutzen) -->
     <script>
       (function(){
         const added = new Set();
-        const LIMIT = 4; // hartes Cap
+        const LIMIT = 4;
 
         function originOf(url){
           try{ const u = new URL(url, location.origin); return u.origin; }catch(e){ return null; }
@@ -293,7 +244,6 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
           }catch(e){}
         }
 
-        // CSS/JS Loader, die zuerst preconnecten:
         window.__LNF_loadStyle = function(href, id){
           try {
             addPreconnectJustInTime(href);
@@ -324,8 +274,101 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
           }catch(e){}
         };
 
-        // Exponiere begrenzt
         window.__LNF_preconnect = function(url){ addPreconnectJustInTime(url); };
+      })();
+    </script>
+
+    <!-- TCF Bridge: einzige Consent-Quelle & CMP-UI -->
+    <script>
+      (function(){
+        var state = { analytics:false, ads:false, adsPersonalized:false, external:false };
+
+        function deriveBooleans(tc){
+          var p = (tc && tc.purpose) || {};
+          var cons = p.consents || {};
+          var li   = p.legitimateInterests || {};
+          var analyticsAllowed = !!(cons['7'] || li['7']);   // Purpose 7: Ad performance measurement
+          var adsAllowed       = !!cons['2'];                // Purpose 2: Basic Ads
+          var personalized     = !!(cons['3'] && cons['4']); // Profil + Auswahl
+          var externalAllowed  = !!(cons['1']);              // Purpose 1: Store/Access
+          return {
+            analytics: analyticsAllowed,
+            ads: adsAllowed,
+            adsPersonalized: adsAllowed && personalized,
+            external: externalAllowed
+          };
+        }
+
+        function pushGtagConsent(s){
+          try {
+            gtag('consent','update', {
+              analytics_storage:   s.analytics ? 'granted' : 'denied',
+              ad_storage:          s.ads ? 'granted' : 'denied',
+              ad_user_data:        s.adsPersonalized ? 'granted' : 'denied',
+              ad_personalization:  s.adsPersonalized ? 'granted' : 'denied'
+            });
+            try { window.__lnf_onGtag && window.__lnf_onGtag(['consent','update', {
+              analytics_storage:   s.analytics ? 'granted' : 'denied',
+              ad_storage:          s.ads ? 'granted' : 'denied',
+              ad_user_data:        s.adsPersonalized ? 'granted' : 'denied',
+              ad_personalization:  s.adsPersonalized ? 'granted' : 'denied'
+            }]); } catch(e){}
+          } catch(e){}
+          try {
+            window.dispatchEvent(new CustomEvent('consent:changed', { detail: s }));
+            window.dispatchEvent(new Event('consent:updated'));
+          } catch(e){}
+        }
+
+        function subscribeTCF(){
+          if (typeof __tcfapi !== 'function') return false;
+          __tcfapi('addEventListener', 2, function(tcData, success){
+            if (!success || !tcData || !tcData.tcString) return;
+            var next = deriveBooleans(tcData);
+            var changed = next.analytics !== state.analytics ||
+                          next.ads !== state.ads ||
+                          next.adsPersonalized !== state.adsPersonalized ||
+                          next.external !== state.external;
+            state = next;
+            if (changed) pushGtagConsent(state);
+          });
+          return true;
+        }
+
+        var got = subscribeTCF();
+        if (!got) {
+          document.addEventListener('DOMContentLoaded', function(){ subscribeTCF(); }, { once:true });
+        }
+
+        window.lnfConsent = {
+          get: function(){ return { ...state }; },
+          allowed: function(key){ return !!state[key]; },
+          on: function(fn){
+            if (typeof fn !== 'function') return;
+            window.addEventListener('consent:changed', function(ev){ fn(ev.detail || { ...state }); });
+          }
+        };
+
+        function openCMP(){
+          try { if (typeof __tcfapi === 'function') { __tcfapi('displayConsentUi', 2, function(){}); return; } } catch(e){}
+          try {
+            window.googlefc = window.googlefc || {};
+            window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
+            window.googlefc.callbackQueue.push(function(){
+              if (typeof googlefc.showRevocationMessage === 'function') {
+                googlefc.showRevocationMessage();
+              }
+            });
+          } catch(e){}
+        }
+        window.openPrivacy = openCMP;
+
+        document.addEventListener('click', function(ev){
+          var t = ev.target && ev.target.closest && ev.target.closest('[data-privacy-open]');
+          if (!t) return;
+          ev.preventDefault();
+          openCMP();
+        });
       })();
     </script>
 
@@ -349,7 +392,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
       <div class="mx-auto max-w-7xl px-4 sm:px-5 py-3 flex items-center gap-4 min-w-0">
         <a href="/" class="flex items-center gap-2 shrink-0">
           <img src="/images/logo.svg" alt="LNF Guides" class="h-7 w-7" />
-          <span class="text-lg font-extrabold tracking-tight">LNF Guides</span>
+        <span class="text-lg font-extrabold tracking-tight">LNF Guides</span>
         </a>
 
         <div class="flex-1 max-w-xl mx-auto hidden md:block min-w-0">
@@ -422,77 +465,6 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
       );
     </script>
 
-    <!-- Privacy-Opener: NUR auf Klick; kein Auto-Open -->
-    <script>
-      (function(){
-        function openPrivacy(){
-          // 1) Funding Choices
-          function tryFC(cb){
-            try {
-              window.googlefc = window.googlefc || {};
-              window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
-              window.googlefc.callbackQueue.push(function(){
-                try{
-                  if (typeof googlefc.showRevocationMessage === 'function') {
-                    googlefc.showRevocationMessage();
-                    cb(true); return;
-                  }
-                }catch(e){}
-                cb(false);
-              });
-            } catch(e){ cb(false); }
-          }
-          // 2) IAB TCF
-          function tryTCF(cb){
-            try {
-              if (typeof __tcfapi === 'function') {
-                __tcfapi('displayConsentUi', 2, function(){});
-                cb(true); return;
-              }
-            } catch(e){}
-            cb(false);
-          }
-          var done=false;
-          function finish(){ if (!done){ done=true; try{ window.consentUI?.open?.('settings'); }catch(e){} } }
-          tryFC(function(ok){ if (ok) return; tryTCF(function(ok2){ if (ok2) return; finish(); }); });
-        }
-
-        document.addEventListener('click', function(ev){
-          var t = ev.target && ev.target.closest && ev.target.closest('[data-privacy-open]');
-          if (!t) return;
-          ev.preventDefault();
-          openPrivacy();
-        });
-        // Kein Auto-Open bei load!
-      })();
-    </script>
-
-    <!-- Externe Embeds Opt-in Brücke -->
-    <script>
-      (function(){
-        window.lnfExternal = {
-          get(){
-            try {
-              var via = window.consent && typeof window.consent.get==='function' ? window.consent.get() : null;
-              if (via && typeof via.external==='boolean') return !!via.external;
-            } catch(e){}
-            try { return !!JSON.parse(localStorage.getItem('lnf-external-embeds')||'false'); } catch { return false; }
-          },
-          set(v){
-            var val = !!v;
-            try { window.consent?.set?.({ external: val }); } catch(e){}
-            try { localStorage.setItem('lnf-external-embeds', JSON.stringify(val)); } catch {}
-            try {
-              var d = (window.lnfConsent && window.lnfConsent.get && window.lnfConsent.get()) || {};
-              var detail = { analytics:!!d.analytics, ads:!!d.ads, adsPersonalized:!!d.adsPersonalized, external:val };
-              window.dispatchEvent(new CustomEvent('consent:changed', { detail }));
-              window.dispatchEvent(new Event('consent:updated'));
-            } catch(e){}
-          }
-        };
-      })();
-    </script>
-
     <!-- Vercel Analytics: nur bei Opt-in (Analytics) -->
     <script>
       (function(){
@@ -517,8 +489,5 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
         window.addEventListener('consent:changed', function(ev){ if (ev?.detail?.analytics) load(); }, { passive: true });
       })();
     </script>
-
-    <!-- AdSense immer geladen; PA/NPA/LTD über Consent Mode/TCF -->
-    <ConsentBanner />
   </body>
 </html>
