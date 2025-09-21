@@ -172,12 +172,8 @@ const wrapId = `adslot-${name.replace(/\W+/g, '-')}`;
       return;
     }
     const consent = readConsent();
-    if (consent.ads){
-      mountAdSenseAndReport(consent);
-    } else {
-      setState('disallowed');
-      renderInfo(false, 'Disallowed — ads blocked by consent.', consent.adsPersonalized);
-    }
+    // Immer mounten → Google entscheidet, ob PA / NPA / LTD
+    mountAdSenseAndReport(consent);
   }
 
   apply();
