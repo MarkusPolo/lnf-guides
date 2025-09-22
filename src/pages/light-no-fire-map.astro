@@ -20,25 +20,76 @@ function toSeconds(tc?: string) {
   return 0;
 }
 function secondsFromRef(ref?: string) {
-  // expects formats like "Trailer 01:25" or "01:25"
+  // expects "Trailer 01:25" or "01:25"
   if (!ref) return 0;
   const m = ref.match(/(\d{1,2}:\d{2})(?::\d{2})?$/);
   return m ? toSeconds(m[1]) : 0;
 }
-const youtubeId = LNF_MAP.video?.youtubeId;
 
-// Build convenient accessors
+const youtubeId = LNF_MAP.video?.youtubeId ?? "";
+
+// Layers
 const layers = LNF_MAP.layers || [];
 const biomesLayer = layers.find((l) => l.id === "biomes");
 const otherLayers = layers.filter((l) => l.id !== "biomes");
 
-// For SEO ItemList (only biomes, as requested focus)
+// SEO: ItemList for Biomes
 const biomeItemsForLd = (biomesLayer?.markers || []).map((m, i) => ({
   "@type": "ListItem",
   position: i + 1,
   name: m.title,
   url: `https://www.lnfguides.com/light-no-fire-map/#${m.id}`
 }));
+
+// ---- JSON-LD strings (pre-stringified, injected via set:html) ----
+const webPageLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Light No Fire Interactive Map (Pre-Release)",
+  "url": "https://www.lnfguides.com/light-no-fire-map/",
+  "dateModified": LNF_MAP.lastUpdatedISO,
+  "description": description
+});
+
+const itemListLd = biomeItemsForLd.length > 0
+  ? JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": "Light No Fire Biomes (Trailer Analysis)",
+      "itemListElement": biomeItemsForLd
+    })
+  : null;
+
+const faqLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is this the official Light No Fire map?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. This is a speculative, pre-release map based on trailer analysis and public information. It will be updated as new details emerge."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Will Light No Fire have a fixed map?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The game is described as procedural and Earth-scale. Expect highly variable worlds; this tool visualizes known elements for discovery and discussion."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Where do the screenshots come from?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Screenshots are taken from publicly available trailers solely for commentary, analysis and education (fair use). We link to the original timestamps where possible."
+      }
+    }
+  ]
+});
 ---
 
 <BaseLayout
@@ -81,7 +132,7 @@ const biomeItemsForLd = (biomesLayer?.markers || []).map((m, i) => ({
       </p>
     </section>
 
-    <!-- Table of Contents / Linkability -->
+    <!-- Table of Contents -->
     <nav class="card p-4 md:p-5 mb-12" aria-label="Table of contents">
       <h2 class="text-lg font-semibold mb-3">In this article</h2>
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-6 text-sm">
@@ -117,7 +168,7 @@ const biomeItemsForLd = (biomesLayer?.markers || []).map((m, i) => ({
       </ul>
     </section>
 
-    <!-- BIOMES SECTION (rich content mirroring the map) -->
+    <!-- BIOMES -->
     {biomesLayer && (
       <section class="prose mt-12">
         <h2 id="biomes">Biomes spotted in trailer</h2>
@@ -137,8 +188,6 @@ const biomeItemsForLd = (biomesLayer?.markers || []).map((m, i) => ({
             <article id={biome.id} class="mt-10 border-b border-border/40 pb-8">
               <div class="flex items-start justify-between gap-4">
                 <h3 class="text-xl font-bold lc-2">{biome.title}</h3>
-
-                <!-- Copy link button -->
                 <button
                   class="btn btn-outline text-xs shrink-0"
                   data-copy-anchor={biome.id}
@@ -149,8 +198,10 @@ const biomeItemsForLd = (biomesLayer?.markers || []).map((m, i) => ({
                 </button>
               </div>
 
-              <!-- Thumbnail + meta -->
               <div class="grid md:grid-cols-4 gap-4 mt-3">
+                <div class="md:col-span-1">
+                  <img src={biome.thumbUrl} alt={biome.title} class="rounded shadow-soft" loading="lazy" />
+                </div>
                 <div class="md:col-span-3 space-y-2">
                   <p>{biome.notes}</p>
 
@@ -161,10 +212,7 @@ const biomeItemsForLd = (biomesLayer?.markers || []).map((m, i) => ({
                   {biome.tags && (
                     <p class="text-sm">
                       {biome.tags.map((tag) => (
-                        <span
-                          class="inline-block bg-surface border border-border/60 rounded-full px-2 py-0.5 text-xs mr-1 mb-1"
-                          >{tag}</span
-                        >
+                        <span class="inline-block bg-surface border border-border/60 rounded-full px-2 py-0.5 text-xs mr-1 mb-1">{tag}</span>
                       ))}
                     </p>
                   )}
@@ -178,10 +226,7 @@ const biomeItemsForLd = (biomesLayer?.markers || []).map((m, i) => ({
                         </a>
                       ) : (
                         biome.sources?.map((s, i) => (
-                          <span>
-                            {i > 0 ? ", " : ""}
-                            {s.ref}
-                          </span>
+                          <span>{i > 0 ? ", " : ""}{s.ref}</span>
                         ))
                       )}
                     </p>
@@ -189,7 +234,6 @@ const biomeItemsForLd = (biomesLayer?.markers || []).map((m, i) => ({
                 </div>
               </div>
 
-              <!-- Media gallery -->
               {biome.media && biome.media.length > 0 && (
                 <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {biome.media.map((m) => (
@@ -206,7 +250,6 @@ const biomeItemsForLd = (biomesLayer?.markers || []).map((m, i) => ({
                 </div>
               )}
 
-              <!-- Back to top -->
               <div class="mt-4">
                 <a href="#overview" class="text-sm underline decoration-transparent hover:decoration-accent">Back to top</a>
               </div>
@@ -216,7 +259,7 @@ const biomeItemsForLd = (biomesLayer?.markers || []).map((m, i) => ({
       </section>
     )}
 
-    <!-- OPTIONAL: OTHER LAYERS (if populated later) -->
+    <!-- OPTIONAL: Other layers (auto if filled later) -->
     {otherLayers.length > 0 && (
       <section class="prose mt-12">
         {otherLayers.map((layer) => (
@@ -310,75 +353,35 @@ const biomeItemsForLd = (biomesLayer?.markers || []).map((m, i) => ({
     </section>
   </main>
 
-  <!-- Copy-link script (client only) -->
+  <!-- Copy-link script -->
   <script is:inline>
     (function(){
       function notify(el, msg){
-        try {
+        try{
           const old = el.textContent;
           el.textContent = msg;
           el.disabled = true;
-          setTimeout(() => { el.textContent = "Copy link"; el.disabled = false; }, 1200);
-        } catch {}
+          setTimeout(()=>{ el.textContent = "Copy link"; el.disabled = false; }, 1200);
+        }catch(e){}
       }
       document.addEventListener('click', function(ev){
         const btn = ev.target && ev.target.closest && ev.target.closest('[data-copy-anchor]');
-        if (!btn) return;
+        if(!btn) return;
         ev.preventDefault();
         const id = btn.getAttribute('data-copy-anchor');
-        if (!id) return;
+        if(!id) return;
         const url = location.origin + location.pathname + '#' + id;
-        try {
-          navigator.clipboard.writeText(url).then(() => notify(btn, 'Copied!')).catch(() => notify(btn, 'Copied!'));
-        } catch {
-          try { prompt('Copy link:', url); } catch {}
+        try{
+          navigator.clipboard.writeText(url).then(()=>notify(btn,'Copied!')).catch(()=>notify(btn,'Copied!'));
+        }catch(e){
+          try{ prompt('Copy link:', url); }catch(_){}
         }
-      }, { passive: false });
+      }, { passive:false });
     })();
   </script>
 
-  <!-- Structured Data: WebPage + ItemList (Biomes) + FAQ -->
-  <script type="application/ld+json" is:inline>
-    {JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "WebPage",
-      "name": "Light No Fire Interactive Map (Pre-Release)",
-      "url": "https://www.lnfguides.com/light-no-fire-map/",
-      "dateModified": LNF_MAP.lastUpdatedISO,
-      "description": "Speculative interactive map for Light No Fire. Trailer-based biomes, creatures, and POIs. Updated as we learn more."
-    })}
-  </script>
-  {biomeItemsForLd.length > 0 && (
-    <script type="application/ld+json" is:inline>
-      {JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "ItemList",
-        "name": "Light No Fire Biomes (Trailer Analysis)",
-        "itemListElement": biomeItemsForLd
-      })}
-    </script>
-  )}
-  <script type="application/ld+json" is:inline>
-    {JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "Is this the official Light No Fire map?",
-          "acceptedAnswer": { "@type": "Answer", "text": "No. This is a speculative, pre-release map based on trailer analysis and public information. It will be updated as new details emerge." }
-        },
-        {
-          "@type": "Question",
-          "name": "Will Light No Fire have a fixed map?",
-          "acceptedAnswer": { "@type": "Answer", "text": "The game is described as procedural and Earth-scale. Expect highly variable worlds; this tool visualizes known elements for discovery and discussion." }
-        },
-        {
-          "@type": "Question",
-          "name": "Where do the screenshots come from?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Screenshots are taken from publicly available trailers solely for commentary, analysis and education (fair use). We link to the original timestamps where possible." }
-        }
-      ]
-    })}
-  </script>
+  <!-- JSON-LD (stringified + set:html to avoid validator parse errors) -->
+  <script type="application/ld+json" is:inline set:html={webPageLd} />
+  {itemListLd && <script type="application/ld+json" is:inline set:html={itemListLd} />}
+  <script type="application/ld+json" is:inline set:html={faqLd} />
 </BaseLayout>
