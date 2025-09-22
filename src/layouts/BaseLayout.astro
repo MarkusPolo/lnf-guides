@@ -278,116 +278,43 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
       })();
     </script>
 
-    <!-- TCF Bridge: zentrale Consent-Quelle + UI-Öffnen -->
+    <!-- TCF Bridge: einzige Consent-Quelle & CMP-UI -->
     <script>
       (function(){
-        // interner Zustand
         var state = { analytics:false, ads:false, adsPersonalized:false, external:false };
         var subscribed = false;
+        var triedInitial = false;
 
-        // ---- Mapping: TCF -> unsere Flags ----
-        // Analytics NUR mit Consent (kein LI):
-        //  - Purpose 1 (Store/Access) UND
-        //  - Purpose 8 (Audience Insights) ODER 9 (Develop/Improve)
         function deriveBooleans(tc){
-          var p    = (tc && tc.purpose) || {};
-          var cons = p.consents || {};
-          // var li = p.legitimateInterests || {}; // bewusst ungenutzt für analytics
+      var p   = (tc && tc.purpose) || {};
+      var cons= p.consents || {};
+      var li  = p.legitimateInterests || {};
 
-          var storageAllowed   = !!cons['1'];                  // Store/Access
-          var audienceInsights = !!cons['8'];                  // Audience insights
-          var improveProducts  = !!cons['9'];                  // Develop/improve products
-          var analyticsAllowed = storageAllowed && (audienceInsights || improveProducts);
+      // Für Ads:
+      var adsAllowed       = !!cons['2'];                         // Basic Ads nur mit Consent
+      var personalized     = !!(cons['3'] && cons['4']);          // Profil + Auswahl
 
-          var adsAllowed       = !!cons['2'];                  // Basic ads (nur Consent)
-          var personalized     = !!(cons['3'] && cons['4']);   // Create/Select personalised ads
+      // Für Analytics: nur CONSENT, KEIN LI; zusätzlich Purpose 1 (Speicherzugriff)
+      var storageAllowed   = !!cons['1'];                          // Store / Access
+      var measAllowed      = !!(cons['8'] || cons['9']);           // Audience Insights / Improve Products
+      var analyticsAllowed = storageAllowed && measAllowed;         // nur wenn beides consented
 
-          return {
-            analytics: analyticsAllowed,
-            ads: adsAllowed,
-            adsPersonalized: adsAllowed && personalized,
-            external: storageAllowed
-          };
-        }
+      return {
+        analytics: analyticsAllowed,
+        ads: adsAllowed,
+        adsPersonalized: adsAllowed && personalized,
+        external: storageAllowed
+      };
+    }
 
-        // ---- Consent Mode Update + Events ----
-        function pushGtagConsent(s){
-          try {
-            gtag('consent','update', {
-              analytics_storage:   s.analytics ? 'granted' : 'denied',
-              ad_storage:          s.ads ? 'granted' : 'denied',
-              ad_user_data:        s.adsPersonalized ? 'granted' : 'denied',
-              ad_personalization:  s.adsPersonalized ? 'granted' : 'denied'
-            });
-            try { window.__lnf_onGtag && window.__lnf_onGtag(['consent','update', s]); } catch(e){}
-          } catch(e){}
-          try {
-            window.dispatchEvent(new CustomEvent('consent:changed', { detail: s }));
-            window.dispatchEvent(new Event('consent:updated'));
-          } catch(e){}
-        }
 
-        // ---- TCF Event Handler ----
-        function handleTC(tcData, success){
-          if (!success || !tcData || !tcData.tcString) return;
-          var next = deriveBooleans(tcData);
-          var changed = next.analytics !== state.analytics ||
-                        next.ads !== state.ads ||
-                        next.adsPersonalized !== state.adsPersonalized ||
-                        next.external !== state.external;
-          state = next;
-          if (changed) pushGtagConsent(state);
-        }
-
-        // ---- TCF Subscription (wiederholt versuchen) ----
-        function subscribeTCFOnce(){
-          if (typeof __tcfapi !== 'function') return false;
-          try { __tcfapi('addEventListener', 2, handleTC); subscribed = true; } catch(e){}
-          try { __tcfapi('getTCData', 2, handleTC); } catch(e){}
-          return subscribed;
-        }
-        (function retrySubscribe(){
-          var tries = 0, iv = setInterval(function(){
-            tries++;
-            if (subscribeTCFOnce() || tries > 25) clearInterval(iv);
-          }, 200);
-          document.addEventListener('DOMContentLoaded', function(){ if (!subscribed) subscribeTCFOnce(); }, { once:true });
-        })();
-
-        // ---- Öffnen der CMP-UI ----
-        function openCMP(){
-          // 1) TCF UI, falls verfügbar
-          try {
-            if (typeof __tcfapi === 'function') {
-              __tcfapi('displayConsentUi', 2, function(){}); 
-              return;
-            }
-          } catch(e){}
-
-          // 2) Funding Choices Revocation Message
-          try {
-            window.googlefc = window.googlefc || {};
-            window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
-            window.googlefc.callbackQueue.push(function(){
-              if (typeof googlefc.showRevocationMessage === 'function') {
-                googlefc.showRevocationMessage();
-              }
-            });
-            // Falls FC Script noch nicht fertig ist, sorgt callbackQueue später dafür
-            return;
-          } catch(e){}
-
-          // 3) Fallback-Hinweis
-          try { console.warn('[CMP] Konnte die UI nicht öffnen. Ist Funding Choices geladen?'); } catch(e){}
-        }
-        window.openPrivacy = openCMP;
-
-        // ---- Öffnen via Buttons mit data-privacy-open ----
-        document.addEventListener('click', function(ev){
-          var t = ev.target && ev.target.closest && ev.target.closest('[data-privacy-open]');
-          if (!t) return;
-          ev.preventDefault();
-          openCMP();
+    function pushGtagConsent(s){
+      try {
+        gtag('consent','update', {
+          analytics_storage:   s.analytics ? 'granted' : 'denied',
+          ad_storage:          s.ads ? 'granted' : 'denied',
+          ad_user_data:        s.adsPersonalized ? 'granted' : 'denied',
+          ad_personalization:  s.adsPersonalized ? 'granted' : 'denied'
         });
 
         // ---- kleine API für deine Skripte ----
