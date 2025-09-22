@@ -356,29 +356,32 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
 
         // ---- Öffnen der CMP-UI ----
         function openCMP(){
-          // 1) TCF UI, falls verfügbar
+          console.log("[CMP] openPrivacy() invoked");
           try {
-            if (typeof __tcfapi === 'function') {
-              __tcfapi('displayConsentUi', 2, function(){}); 
+            if (typeof __tcfapi === "function") {
+              console.log("[CMP] using __tcfapi.displayConsentUi");
+              __tcfapi("displayConsentUi", 2, function(success){
+                console.log("[CMP] __tcfapi success =", success);
+              });
               return;
             }
           } catch(e){}
 
-          // 2) Funding Choices Revocation Message
           try {
             window.googlefc = window.googlefc || {};
             window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
             window.googlefc.callbackQueue.push(function(){
-              if (typeof googlefc.showRevocationMessage === 'function') {
+              console.log("[CMP] FC ready, attempting showRevocationMessage()");
+              if (typeof googlefc.showRevocationMessage === "function") {
                 googlefc.showRevocationMessage();
+              } else {
+                console.warn("[CMP] FC is ready but no showRevocationMessage()");
               }
             });
-            // Falls FC Script noch nicht fertig ist, sorgt callbackQueue später dafür
             return;
           } catch(e){}
 
-          // 3) Fallback-Hinweis
-          try { console.warn('[CMP] Konnte die UI nicht öffnen. Ist Funding Choices geladen?'); } catch(e){}
+          console.warn("[CMP] no CMP UI available");
         }
         window.openPrivacy = openCMP;
 
