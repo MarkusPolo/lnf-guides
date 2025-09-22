@@ -279,27 +279,34 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
     </script>
 
     <!-- TCF Bridge: einzige Consent-Quelle & CMP-UI -->
-<script>
-  (function(){
-    var state = { analytics:false, ads:false, adsPersonalized:false, external:false };
-    var subscribed = false;
-    var triedInitial = false;
+    <script>
+      (function(){
+        var state = { analytics:false, ads:false, adsPersonalized:false, external:false };
+        var subscribed = false;
+        var triedInitial = false;
 
-    function deriveBooleans(tc){
-      var p = (tc && tc.purpose) || {};
-      var cons = p.consents || {};
-      var li   = p.legitimateInterests || {};
-      var analyticsAllowed = !!(cons['7'] || li['7']);   // Purpose 7: Ad performance measurement
-      var adsAllowed       = !!cons['2'];                // Purpose 2: Basic Ads
-      var personalized     = !!(cons['3'] && cons['4']); // Profil + Auswahl
-      var externalAllowed  = !!(cons['1']);              // Purpose 1: Store/Access
+        function deriveBooleans(tc){
+      var p   = (tc && tc.purpose) || {};
+      var cons= p.consents || {};
+      var li  = p.legitimateInterests || {};
+
+      // Für Ads:
+      var adsAllowed       = !!cons['2'];                         // Basic Ads nur mit Consent
+      var personalized     = !!(cons['3'] && cons['4']);          // Profil + Auswahl
+
+      // Für Analytics: nur CONSENT, KEIN LI; zusätzlich Purpose 1 (Speicherzugriff)
+      var storageAllowed   = !!cons['1'];                          // Store / Access
+      var measAllowed      = !!(cons['8'] || cons['9']);           // Audience Insights / Improve Products
+      var analyticsAllowed = storageAllowed && measAllowed;         // nur wenn beides consented
+
       return {
         analytics: analyticsAllowed,
         ads: adsAllowed,
         adsPersonalized: adsAllowed && personalized,
-        external: externalAllowed
+        external: storageAllowed
       };
     }
+
 
     function pushGtagConsent(s){
       try {
