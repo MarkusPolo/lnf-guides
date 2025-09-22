@@ -285,23 +285,16 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
         var state = { analytics:false, ads:false, adsPersonalized:false, external:false };
         var subscribed = false;
 
-        // ---- Mapping: TCF -> unsere Flags ----
-        // Analytics NUR mit Consent (kein LI):
-        //  - Purpose 1 (Store/Access) UND
-        //  - Purpose 8 (Audience Insights) ODER 9 (Develop/Improve)
+        // --- Mapping: TCF -> Flags (Analytics nur mit Consent, kein LI) ---
         function deriveBooleans(tc){
           var p    = (tc && tc.purpose) || {};
           var cons = p.consents || {};
-          // var li = p.legitimateInterests || {}; // bewusst ungenutzt für analytics
-
-          var storageAllowed   = !!cons['1'];                  // Store/Access
-          var audienceInsights = !!cons['8'];                  // Audience insights
-          var improveProducts  = !!cons['9'];                  // Develop/improve products
+          var storageAllowed   = !!cons['1']; // Store/Access
+          var audienceInsights = !!cons['8']; // Audience insights
+          var improveProducts  = !!cons['9']; // Develop/improve products
           var analyticsAllowed = storageAllowed && (audienceInsights || improveProducts);
-
-          var adsAllowed       = !!cons['2'];                  // Basic ads (nur Consent)
-          var personalized     = !!(cons['3'] && cons['4']);   // Create/Select personalised ads
-
+          var adsAllowed       = !!cons['2']; // Basic Ads
+          var personalized     = !!(cons['3'] && cons['4']); // Create/Select personalised ads
           return {
             analytics: analyticsAllowed,
             ads: adsAllowed,
@@ -310,7 +303,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
           };
         }
 
-        // ---- Consent Mode Update + Events ----
+        // --- Consent Mode Update + Events ---
         function pushGtagConsent(s){
           try {
             gtag('consent','update', {
@@ -327,7 +320,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
           } catch(e){}
         }
 
-        // ---- TCF Event Handler ----
+        // --- TCF Event Handler ---
         function handleTC(tcData, success){
           if (!success || !tcData || !tcData.tcString) return;
           var next = deriveBooleans(tcData);
@@ -339,7 +332,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
           if (changed) pushGtagConsent(state);
         }
 
-        // ---- TCF Subscription (wiederholt versuchen) ----
+        // --- TCF Subscription (wiederholt versuchen) ---
         function subscribeTCFOnce(){
           if (typeof __tcfapi !== 'function') return false;
           try { __tcfapi('addEventListener', 2, handleTC); subscribed = true; } catch(e){}
@@ -354,38 +347,41 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
           document.addEventListener('DOMContentLoaded', function(){ if (!subscribed) subscribeTCFOnce(); }, { once:true });
         })();
 
-        // ---- Öffnen der CMP-UI ----
-        function openCMP(){
-          console.log("[CMP] openPrivacy() invoked");
+        // --- CMP öffnen (priorisiere Funding Choices, dann TCF) ---
+        function openCMP(opts){
+          // 1) Funding Choices, wenn verfügbar (zeigt den Änderungs-/Widerrufs-Dialog)
           try {
-            if (typeof __tcfapi === "function") {
-              console.log("[CMP] using __tcfapi.displayConsentUi");
-              __tcfapi("displayConsentUi", 2, function(success){
-                console.log("[CMP] __tcfapi success =", success);
-              });
+            if ((!opts || opts.force !== 'tcf') &&
+                window.googlefc &&
+                typeof googlefc.showRevocationMessage === 'function') {
+              googlefc.showRevocationMessage();
               return;
             }
           } catch(e){}
 
+          // 2) TCF UI (einige CMP-Setups zeigen hier nichts – deshalb nur Fallback)
           try {
-            window.googlefc = window.googlefc || {};
-            window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
-            window.googlefc.callbackQueue.push(function(){
-              console.log("[CMP] FC ready, attempting showRevocationMessage()");
-              if (typeof googlefc.showRevocationMessage === "function") {
-                googlefc.showRevocationMessage();
-              } else {
-                console.warn("[CMP] FC is ready but no showRevocationMessage()");
-              }
-            });
-            return;
+            if ((!opts || opts.force !== 'fc') &&
+                typeof __tcfapi === 'function') {
+              __tcfapi('displayConsentUi', 2, function(){});
+              return;
+            }
           } catch(e){}
 
-          console.warn("[CMP] no CMP UI available");
+          // 3) Falls FC noch nicht ready: queue it
+          try {
+            if (!window.googlefc) window.googlefc = {};
+            if (!googlefc.callbackQueue) googlefc.callbackQueue = [];
+            googlefc.callbackQueue.push(function(){
+              if (typeof googlefc.showRevocationMessage === 'function') {
+                googlefc.showRevocationMessage();
+              }
+            });
+          } catch(e){}
         }
         window.openPrivacy = openCMP;
 
-        // ---- Öffnen via Buttons mit data-privacy-open ----
+        // Delegation: Buttons/Lnks mit data-privacy-open
         document.addEventListener('click', function(ev){
           var t = ev.target && ev.target.closest && ev.target.closest('[data-privacy-open]');
           if (!t) return;
@@ -393,7 +389,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
           openCMP();
         });
 
-        // ---- kleine API für deine Skripte ----
+        // kleine API
         window.lnfConsent = {
           get: function(){ return { ...state }; },
           allowed: function(key){ return !!state[key]; },
@@ -404,6 +400,7 @@ const ADSENSE_CLIENT = "ca-pub-6618488631609364";
         };
       })();
     </script>
+
 
 
 
