@@ -4,41 +4,130 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import GuideCard from '../components/GuideCard.astro';
 import { getCollection } from 'astro:content';
 
-const guides = (await getCollection('guides')).sort((a, b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate)).slice(0, 6);
-const news = (await getCollection('news')).sort((a, b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate)).slice(0, 3);
+// Daten laden
+const guides = (await getCollection('guides'))
+  .sort((a, b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate))
+  .slice(0, 6);
+
+const news = (await getCollection('news'))
+  .sort((a, b) => +new Date(b.data.pubDate) - +new Date(a.data.pubDate))
+  .slice(0, 3);
+
+// Map-Infos (Thumbnail/Update)
+// Passe image und updated ggf. an deine echten Werte an:
+const mapHref = '/light-no-fire-map/';
+const mapTitle = 'Light No Fire Interactive Map (Pre-Release)';
+const mapDesc = 'Speculative, trailer-based interactive world map with biomes and timestamps. Updated as we learn more.';
+const mapImage = '/images/og/lnf-map-og.webp'; // Fallback-OG – siehe Hinweis unten
+// Wenn du das echte Updated-Datum aus der Map-Config reinziehen willst, kannst du es auch hier hart setzen:
+const mapUpdated = '20 Sept 2025';
 ---
 
 <BaseLayout title="Light No Fire Guides" description="Guides for beginners, intermediate, and advanced players. Spoiler-safe tips, and meta updates – built by players, for players.">
   <Fragment slot="search"><SearchOverlay /></Fragment>
+
+  <!-- HERO -->
   <section class="mx-auto max-w-7xl px-4 mt-10 grid gap-6 md:grid-cols-2 items-center">
     <div>
       <h1 class="text-4xl md:text-5xl font-extrabold">Light No Fire Guides</h1>
-      <p class="text-text2 mt-4">Guides for beginners, intermediate, and advanced players. Spoiler-safe tips, and meta updates – built by players, for players.</p>
-      <div class="mt-6 flex gap-3">
+      <p class="text-text2 mt-4">
+        Guides for beginners, intermediate, and advanced players. Spoiler-safe tips, and meta updates – built by players, for players.
+      </p>
+      <div class="mt-6 flex flex-wrap gap-3">
         <a href="/guides/questions/" class="btn btn-primary">Read Guides for the most anticipated Questions</a>
         <a href="/news/" class="btn btn-outline">Latest News</a>
+        <!-- Neuer CTA zur Map -->
+        <a href={mapHref} class="btn btn-outline" aria-label="Open the interactive map">
+          Interactive Map
+        </a>
       </div>
     </div>
     <div class="card p-6">
-      <p class="text-sm text-text2">Unofficial fan site. Not affiliated with Hello Games.</p>
+      <p class="text-sm text-text2">
+        Unofficial fan site. Not affiliated with Hello Games.
+      </p>
     </div>
   </section>
 
+  <!-- INTERACTIVE TOOLS / MAP CARD -->
+  <section class="mx-auto max-w-7xl px-4 mt-14">
+    <h2 class="text-2xl font-bold mb-4">Interactive Tools</h2>
 
+    <a href={mapHref} class="block group focus:outline-none">
+      <article class="card overflow-hidden hover:translate-y-[-2px] transition">
+        <!-- Media -->
+        <div class="relative w20%">
+          <img
+            src={mapImage}
+            alt="Light No Fire pre-release interactive map thumbnail"
+            class="w-150 h-auto block"
+            loading="eager"
+          />
+          <!-- Badges -->
+          <div class="absolute left-3 top-3 flex gap-2">
+            <span class="inline-flex items-center gap-1 rounded-full bg-bg/80 border border-border px-2 py-1 text-xs">
+              Speculative
+            </span>
+            <span class="inline-flex items-center gap-1 rounded-full bg-bg/80 border border-border px-2 py-1 text-xs">
+              Updated {mapUpdated}
+            </span>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-5 md:p-6">
+          <h3 class="text-xl md:text-2xl font-bold group-hover:underline">{mapTitle}</h3>
+          <p class="text-text2 mt-2">{mapDesc}</p>
+          <div class="mt-4 flex items-center gap-3">
+            <span class="inline-flex items-center gap-2 text-sm text-text2">
+              <span class="inline-block h-3 w-3 rounded-full" style="background:#2DD4BF"></span> Biomes
+            </span>
+            <!-- zukünftige Layer (ausgegraut für Erwartungsmanagement) -->
+            <span class="inline-flex items-center gap-2 text-sm text-text2 opacity-60">
+              <span class="inline-block h-3 w-3 rounded-full" style="background:#A78BFA"></span> Creatures (soon)
+            </span>
+            <span class="inline-flex items-center gap-2 text-sm text-text2 opacity-60">
+              <span class="inline-block h-3 w-3 rounded-full" style="background:#F59E0B"></span> Structures (maybe)
+            </span>
+          </div>
+
+          <div class="mt-5">
+            <span class="btn btn-primary">Open Interactive Map</span>
+          </div>
+        </div>
+      </article>
+    </a>
+  </section>
+
+  <!-- FEATURED GUIDES -->
   <section class="mx-auto max-w-7xl px-4 mt-14">
     <h2 class="text-2xl font-bold mb-4">Featured Guides</h2>
     <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {guides.map(g => (
-        <GuideCard href={`/guides/${g.slug}/`} title={g.data.title} description={g.data.description} tag={g.data.category} readingTime={g.data.readingTime} cover={g.data.cover} />
+        <GuideCard
+          href={`/guides/${g.slug}/`}
+          title={g.data.title}
+          description={g.data.description}
+          tag={g.data.category}
+          readingTime={g.data.readingTime}
+          cover={g.data.cover}
+        />
       ))}
     </div>
   </section>
 
+  <!-- LATEST NEWS -->
   <section class="mx-auto max-w-7xl px-4 mt-14">
     <h2 class="text-2xl font-bold mb-4">Latest News</h2>
     <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {news.map(n => (
-        <GuideCard href={`/news/${n.slug}/`} title={n.data.title} description={n.data.description} readingTime={n.data.readingTime} cover={n.data.cover} />
+        <GuideCard
+          href={`/news/${n.slug}/`}
+          title={n.data.title}
+          description={n.data.description}
+          readingTime={n.data.readingTime}
+          cover={n.data.cover}
+        />
       ))}
     </div>
   </section>
