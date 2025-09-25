@@ -15,10 +15,13 @@ tags:
 
 The studio behind No Man’s Sky is called [Hello Games](/guides/questions/who-is-making-light-no-fire/). Almost two years ago, in December 2023, they announced they were developing a new game: [Light No Fire](/guides/questions/game-details-2025/).  
 The trailer has now accumulated over 19 million views and spread a lot of hype around it. That’s why we are discussing their differences and similarities. Every studio has its own style and touch to its games. If you played No Man’s Sky before, you may have noticed some visual similarities between both games. The first time I saw the trailer, Light No Fire seemed a lot like its older sibling No Man’s Sky. I have over 300 hours of playtime in No Man’s Sky myself and have played since release.
+<br><br>
+> <img src="/images/placeholders/swimming_lightnofire_vs_nomanssky.webp" alt="swimming animation comparison Light No Fire and No Mans Sky" width="400" class="rounded-card shadow-soft" />
+
 
 ## Characters
 
-At first glance, the characters of No Man’s Sky and Light No Fire don’t look the same visually. But I think the walking animation in both games is pretty much the same. The characters probably only differ in their theme. That’s because the settings of those games are very different. I will cover more of the setting later on. 
+At first glance, the characters of No Man’s Sky and Light No Fire don’t look the same visually. But I think the walking animation in both games is pretty much the same. The characters probably only differ in their theme. That’s because the settings of those games are very different. I will cover more of the setting later on. Especially the swiming animations look pretty much the same as seen in those two screenshots: 
 
 ## Map Differences
 
