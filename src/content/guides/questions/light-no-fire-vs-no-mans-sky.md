@@ -4,7 +4,7 @@ description: "Both games don’t just share the same studio but also some key me
 pubDate: 2025-09-24
 updatedDate: 2025-09-24
 category: "questions"
-cover: "/images/placeholders/light-no-fire-leaks.webp"
+cover: "/images/placeholders/light-no-fire-gliding.webp"
 tags:
   - no mans sky
   - comparison
