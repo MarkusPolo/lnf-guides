@@ -4,7 +4,7 @@ description: "An expert breakdown with screenshots, analysis, and detailed descr
 pubDate: 2025-10-09
 updatedDate: 2025-10-09
 category: "questions"
-cover: "/images/placeholders/lnfvsnms.webp"
+cover: "/images/placeholders/wallpaper_races.webp"
 tags:
   - races
   - humans
