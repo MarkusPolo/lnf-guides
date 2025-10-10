@@ -17,16 +17,11 @@
     {
       "src": "^/light-no-fire-map(/.*)?$",
       "status": 410,
+      "dest": "/410.html",
       "headers": {
         "Cache-Control": "no-store, no-cache, must-revalidate",
         "Content-Type": "text/html; charset=utf-8"
-      },
-      "dest": "/410-gone"
+      }
     }
-  ],
-  "static": {
-    "404-gone": {
-      "content": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>410 Gone</title></head><body><h1>410 Gone</h1><p>Diese Seite existiert nicht mehr.</p></body></html>"
-    }
-  }
+  ]
 }
