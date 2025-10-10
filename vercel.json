@@ -13,15 +13,24 @@
       ]
     }
   ],
-  "routes": [
+  "redirects": [
     {
-      "src": "^/light-no-fire-map(/.*)?$",
-      "status": 410,
-      "dest": "/410.html",
-      "headers": {
-        "Cache-Control": "no-store, no-cache, must-revalidate",
-        "Content-Type": "text/html; charset=utf-8"
-      }
+      "source": "/light-no-fire-map",
+      "has": [{ "type": "host", "value": "lnfguides.com" }],
+      "destination": "/410.html",
+      "statusCode": 410
+    },
+    {
+      "source": "/light-no-fire-map",
+      "has": [{ "type": "host", "value": "www.lnfguides.com" }],
+      "destination": "/410.html",
+      "statusCode": 410
+    },
+    {
+      "source": "/light-no-fire-map/(.*)",
+      "has": [{ "type": "host", "value": "www.lnfguides.com" }],
+      "destination": "/410.html",
+      "statusCode": 410
     }
   ]
 }
