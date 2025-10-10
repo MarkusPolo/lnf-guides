@@ -16,11 +16,19 @@
   "redirects": [
     {
       "source": "/light-no-fire-map",
+      "has": [{ "type": "host", "value": "lnfguides.com" }],
+      "destination": "https://www.lnfguides.com/410.html",
+      "statusCode": 410
+    },
+    {
+      "source": "/light-no-fire-map",
+      "has": [{ "type": "host", "value": "www.lnfguides.com" }],
       "destination": "/410.html",
       "statusCode": 410
     },
     {
       "source": "/light-no-fire-map/(.*)",
+      "has": [{ "type": "host", "value": "www.lnfguides.com" }],
       "destination": "/410.html",
       "statusCode": 410
     }
