@@ -36,10 +36,6 @@ const mapUpdated = '20 Sept 2025';
       <div class="mt-6 flex flex-wrap gap-3">
         <a href="/guides/questions/" class="btn btn-primary">Read Guides for the most anticipated Questions</a>
         <a href="/news/" class="btn btn-outline">Latest News</a>
-        <!-- Neuer CTA zur Map -->
-        <a href={mapHref} class="btn btn-outline" aria-label="Open the interactive map">
-          Interactive Map
-        </a>
       </div>
     </div>
     <div class="card p-6">
@@ -48,55 +44,6 @@ const mapUpdated = '20 Sept 2025';
       </p>
     </div>
   </section>
-
-  <!-- INTERACTIVE TOOLS / MAP CARD -->
-  <section class="mx-auto max-w-7xl px-4 mt-14">
-    <h2 class="text-2xl font-bold mb-4">Interactive Tools</h2>
-
-    <a href={mapHref} class="block group focus:outline-none">
-      <article class="card overflow-hidden hover:translate-y-[-2px] transition">
-        <!-- Media -->
-        <div class="relative w20%">
-          <img
-            src={mapImage}
-            alt="Light No Fire pre-release interactive map thumbnail"
-            class="w-150 h-auto block"
-            loading="eager"
-          />
-          <!-- Badges -->
-          <div class="absolute left-3 top-3 flex gap-2">
-            <span class="inline-flex items-center gap-1 rounded-full bg-bg/80 border border-border px-2 py-1 text-xs">
-              Speculative
-            </span>
-            <span class="inline-flex items-center gap-1 rounded-full bg-bg/80 border border-border px-2 py-1 text-xs">
-              Updated {mapUpdated}
-            </span>
-          </div>
-        </div>
-
-        <!-- Content -->
-        <div class="p-5 md:p-6">
-          <h3 class="text-xl md:text-2xl font-bold group-hover:underline">{mapTitle}</h3>
-          <p class="text-text2 mt-2">{mapDesc}</p>
-          <div class="mt-4 flex items-center gap-3">
-            <span class="inline-flex items-center gap-2 text-sm text-text2">
-              <span class="inline-block h-3 w-3 rounded-full" style="background:#2DD4BF"></span> Biomes
-            </span>
-            <!-- zukünftige Layer (ausgegraut für Erwartungsmanagement) -->
-            <span class="inline-flex items-center gap-2 text-sm text-text2 opacity-60">
-              <span class="inline-block h-3 w-3 rounded-full" style="background:#A78BFA"></span> Creatures (soon)
-            </span>
-            <span class="inline-flex items-center gap-2 text-sm text-text2 opacity-60">
-              <span class="inline-block h-3 w-3 rounded-full" style="background:#F59E0B"></span> Structures (maybe)
-            </span>
-          </div>
-
-          <div class="mt-5">
-            <span class="btn btn-primary">Open Interactive Map</span>
-          </div>
-        </div>
-      </article>
-    </a>
   </section>
 
   <!-- FEATURED GUIDES -->
