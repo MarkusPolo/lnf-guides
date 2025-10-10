@@ -13,11 +13,16 @@
       ]
     }
   ],
-  "routes": [
+  "redirects": [
     {
-      "src": "^/light-no-fire-map(/.*)?$",
-      "status": 410,
-      "dest": "/410.html"
+      "source": "/light-no-fire-map",
+      "destination": "/410.html",
+      "statusCode": 410
+    },
+    {
+      "source": "/light-no-fire-map/(.*)",
+      "destination": "/410.html",
+      "statusCode": 410
     }
   ]
 }
