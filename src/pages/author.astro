@@ -1,0 +1,91 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro"; // passe den Pfad an
+
+const title = "About the Author – LNF Guides";
+const description =
+  "Information about the LNF Guides team: who we are, our focus, editorial approach, and how we create reliable guides and analyses for Light No Fire.";
+const canonical = "https://lnfguides.com/author/";
+
+const authorData = {
+  name: "LNF Guides",
+  founded: "2025",
+  location: "International",
+  email: "business.tryonai@gmail.com",
+  website: "https://lnfguides.com",
+  social: [
+    "https://github.com/MarkusPolo"
+  ]
+};
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  canonical={canonical}
+  ogImage="/images/og/default.png"
+  imageAlt="LNF Guides Author"
+>
+  <main class="mx-auto max-w-3xl px-4 sm:px-6 py-12 prose dark:prose-invert">
+    <h1>About the Author</h1>
+
+    <p>
+      <strong>LNF Guides</strong> is an independent fan-driven project focused on
+      collecting verified and speculative information, guides, and analyses about <em>Light No Fire</em>.
+      Our goal is to provide clear, spoiler-safe resources for players of all levels.
+    </p>
+
+    <h2>Who we are</h2>
+    <p>
+      This site is maintained by just me(at the moment), a No Mans Sky Veteran.
+      I analyze official footage, developer statements, and in-game systems once available. I have a System Engineering Background and I'm playing alot of different Games. I love Survival Games, so as soon, as I saw Light No Fire's Trailer, I was hooked. By providing you with this content I'm able to get really invested into the game and share my excitement in guides and Articles with you.
+    </p>
+
+    <h2>Editorial policy</h2>
+    <p>
+      We always distinguish between verified information and speculation.
+      All speculative elements are clearly marked and accompanied by a confidence score.
+      We respect and acknowledge criticism in the provided Comments below every Article.
+    </p>
+
+    <h2>Contact</h2>
+    <ul>
+      <li>Email: <a href={`mailto:${authorData.email}`}>{authorData.email}</a></li>
+      <li>GitHub: <a href={authorData.social[0]}>{authorData.social[0]}</a></li>
+    </ul>
+
+    <h2>Credits & Acknowledgments</h2>
+    <p>
+      <!-- ⬅️ optional -->
+      All screenshots and artwork remain property of their respective creators.
+      <em>LNF Guides</em> is a non-commercial fan project and not affiliated with Hello Games.
+    </p>
+  </main>
+
+  <!-- ✅ JSON-LD: Author / Organization -->
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": authorData.website + "#organization",
+      name: authorData.name,
+      url: authorData.website,
+      logo: {
+        "@type": "ImageObject",
+        url: authorData.website + "/images/logo.svg"
+      },
+      foundingDate: authorData.founded,
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: authorData.location
+      },
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "Editorial inquiries",
+        email: authorData.email
+      },
+      sameAs: authorData.social
+    })}
+  />
+</BaseLayout>

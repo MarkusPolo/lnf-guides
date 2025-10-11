@@ -1,10 +1,76 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const title = "About – LNF Guides";
+const description =
+  "Learn more about LNF Guides – who we are, how we create spoiler-safe Light No Fire guides, and our commitment to clarity and transparency.";
+const canonical = "https://lnfguides.com/about/";
 ---
 
-<BaseLayout title="About" description="Who we are and how we build guides.">
-  <section class="mx-auto max-w-3xl px-4 mt-8 prose prose-invert">
+<BaseLayout title={title} description={description} canonical={canonical} ogImage="/images/og/default.png">
+  <main class="mx-auto max-w-3xl px-4 sm:px-6 py-12 prose dark:prose-invert">
     <h1>About</h1>
-    <p>No Man’s Sky veteran team; building spoiler-safe guides with clear version history.</p>
-  </section>
+
+    <p>
+      <strong>LNF Guides</strong> is a fan-driven project dedicated to providing clear,
+      spoiler-safe, and data-backed guides for <em>Light No Fire</em>.
+      We aim to help both beginners and advanced players discover the game’s world efficiently
+      without compromising the sense of exploration.
+    </p>
+
+    <h2>Our Mission</h2>
+    <p>
+      We combine in-game testing, community research, and verified data to keep our content
+      accurate and up-to-date. Every article lists the version or update it refers to,
+      so you can always track when information changed.
+    </p>
+
+    <h2>Editorial Guidelines</h2>
+    <ul>
+      <li>Speculative content is always marked with a confidence rating.</li>
+      <li>We never use AI-generated content without human review and clear labeling.</li>
+    </ul>
+
+    <h2>About the Author</h2>
+    <p>
+      All content is published under the name <strong>LNF Guides</strong>, our editorial identity.
+      You can learn more about the team, our editorial policy, and how to contact us on the
+      <a href="/author/">Author page</a>.
+    </p>
+
+    <h2>Disclaimer</h2>
+    <p>
+      LNF Guides is an unofficial fan site and not affiliated with Hello Games.
+      All screenshots, artwork, and trademarks belong to their respective owners.
+    </p>
+  </main>
+
+  <!-- ✅ JSON-LD: About Page / Organization -->
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "AboutPage",
+      "@id": "https://lnfguides.com/about/",
+      url: "https://lnfguides.com/about/",
+      name: "About LNF Guides",
+      description:
+        "Information about LNF Guides, a fan project creating spoiler-safe guides for Light No Fire.",
+      mainEntity: {
+        "@type": "Organization",
+        "@id": "https://lnfguides.com/#organization",
+        name: "LNF Guides",
+        url: "https://lnfguides.com/",
+        logo: {
+          "@type": "ImageObject",
+          url: "https://lnfguides.com/images/logo.svg"
+        },
+        sameAs: [
+          "https://github.com/lnf-guides",
+          "https://twitter.com/lnfguides"
+        ]
+      }
+    })}
+  />
 </BaseLayout>
