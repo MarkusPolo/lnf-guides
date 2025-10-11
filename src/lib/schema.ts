@@ -61,9 +61,9 @@ export function buildArticleLD(input: BuildArticleInput) {
       "@type": "WebPage",
       "@id": canonical
     },
-    ...(author ? { author } : {}),
-    ...(publisher ? { publisher } : {}),
-    ...(inLanguage ? { inLanguage } : {}),
+    ...(author ? { author } : { author: "Marius Morgenstern" }),
+    ...(publisher ? { publisher } : { publisher: "LNFGUIDES" }),
+    ...(inLanguage ? { inLanguage } : { inLanguage: "English" }),
     ...(keywords ? { keywords } : {}),
   };
 
